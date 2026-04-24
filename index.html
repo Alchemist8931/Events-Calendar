@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#FFFFFF" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Events" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Events Calendar</title>
+
+<!-- PWA: если рядом положить manifest.json — раскомментируй строку ниже -->
+<!-- <link rel="manifest" href="manifest.json" /> -->
+
+<!-- Tailwind (без сборщиков) -->
+<script src="https://cdn.tailwindcss.com/3.4.4"></script>
+
+<!-- Шрифт SN Pro -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --bg-secondary: #FAFAFA;
+    --bg-tertiary: #F5F5F5;
+    --fg: #0A0A0A;
+    --fg-secondary: #404040;
+    --fg-muted: #737373;
+    --border: #E5E5E5;
+    --border-light: #F0F0F0;
+    --card: #FFFFFF;
+
+    --success: #16A34A;
+    --warning: #D97706;
+    --error:   #DC2626;
+    --info:    #2563EB;
+
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
+
+  * { -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'SN Pro', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  /* Корпоративная типографика: все заголовки и важные подписи — от 500 */
+  h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.01em; }
+
+  /* Blueprint-grid фон для экранов авторизации */
+  .bp-grid {
+    background-image:
+      linear-gradient(to right, rgba(10,10,10,0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(10,10,10,0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Corner-marks */
+  .corner-card { position: relative; }
+  .corner-card::before,
+  .corner-card::after,
+  .corner-card > .cm-tl,
+  .corner-card > .cm-tr {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+    border-color: var(--fg);
+    border-style: solid;
+    pointer-events: none;
+  }
+  .corner-card::before { top:-1px;  left:-1px;  border-width: 1px 0 0 1px; }
+  .corner-card::after  { bottom:-1px; right:-1px; border-width: 0 1px 1px 0; }
+  .corner-card > .cm-tr { top:-1px;  right:-1px; border-width: 1px 1px 0 0; }
+  .corner-card > .cm-tl { bottom:-1px; left:-1px;  border-width: 0 0 1px 1px; }
+
+  /* Reveal-анимация */
+  @keyframes reveal {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .reveal { animation: reveal .35s ease-out both; }
+
+  /* Scan-line */
+  @keyframes scan {
+    0%   { transform: translateY(-100%); }
+    100% { transform: translateY(2000%); }
+  }
+  .scan-line {
+    position: absolute; left: 0; right: 0; top: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(10,10,10,0.4), transparent);
+    animation: scan 5s linear infinite;
+  }
+
+  /* Glass button (тёмная стеклянная) */
+  .btn-primary {
+    background: var(--fg);
+    color: #fff;
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-weight: 500;
+    transition: transform .1s ease, background .15s ease;
+  }
+  .btn-primary:hover { background: #1A1A1A; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: .5; pointer-events: none; }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--fg);
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-weight: 500;
+  }
+  .btn-ghost:hover { background: var(--bg-secondary); }
+
+  /* Инпут */
+  .field {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--fg);
+    font-size: 16px; /* чтобы iOS не зумил */
+    outline: none;
+    transition: border-color .15s ease;
+  }
+  .field:focus { border-color: var(--fg); }
+  .field::placeholder { color: var(--fg-muted); }
+
+  /* Бейдж статуса */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 9999px;
+    font-size: 11px; font-weight: 500; line-height: 1.4;
+  }
+  .badge-success { background: rgba(22,163,74,.1);  color: var(--success); }
+  .badge-warning { background: rgba(217,119,6,.1);  color: var(--warning); }
+  .badge-error   { background: rgba(220,38,38,.1);  color: var(--error);   }
+  .badge-info    { background: rgba(37,99,235,.1);  color: var(--info);    }
+  .badge-muted   { background: var(--bg-tertiary);  color: var(--fg-muted);}
+
+  /* Календарь */
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-cell {
+    aspect-ratio: 1 / 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    gap: 2px;
+    padding: 6px 0 4px;
+    background: var(--bg);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s ease, border-color .15s ease;
+    position: relative;
+  }
+  .cal-cell:hover { background: var(--bg-secondary); }
+  .cal-cell.is-other-month { color: var(--fg-muted); opacity: .45; }
+  .cal-cell.is-today       { border-color: var(--fg); font-weight: 600; }
+  .cal-cell.is-selected    { background: var(--fg); color: #fff; }
+  .cal-cell.is-selected .cell-dot { background: #fff; }
+  .cell-dot {
+    width: 4px; height: 4px; border-radius: 9999px;
+    background: var(--fg);
+  }
+  .cell-dots { display: flex; gap: 3px; margin-top: 2px; }
+
+  /* Список событий */
+  .event-card {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+    padding: 12px 14px;
+    transition: border-color .15s ease, transform .1s ease;
+  }
+  .event-card:hover { border-color: var(--fg); }
+
+  /* Чекбокс */
+  .check {
+    appearance: none; -webkit-appearance: none;
+    width: 20px; height: 20px; border: 1.5px solid var(--border);
+    border-radius: 6px; background: var(--bg); cursor: pointer;
+    display: grid; place-items: center; flex-shrink: 0;
+    transition: background .15s, border-color .15s;
+  }
+  .check:checked { background: var(--fg); border-color: var(--fg); }
+  .check:checked::after {
+    content: ''; width: 10px; height: 6px;
+    border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translate(1px,-1px);
+  }
+
+  /* Модалка */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(10,10,10,0.35);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    z-index: 50;
+  }
+  .modal-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: var(--bg); border-radius: 20px 20px 0 0;
+    max-height: 92vh; overflow-y: auto;
+    padding-bottom: calc(16px + var(--safe-bottom));
+    z-index: 51;
+    animation: sheet-up .25s ease-out;
+  }
+  @keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .sheet-handle {
+    width: 40px; height: 4px; border-radius: 2px;
+    background: var(--border); margin: 8px auto 0;
+  }
+
+  /* Toast */
+  .toast {
+    background: var(--fg); color: #fff;
+    border-radius: 12px; padding: 10px 14px;
+    font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    animation: reveal .2s ease-out both;
+  }
+
+  /* Скрыть скроллбар календаря при свайпе */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+
+  /* Контейнер приложения: мобильный формат даже на десктопе */
+  .app-frame {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--bg);
+    position: relative;
+  }
+
+  /* Градиент аватара по умолчанию */
+  .avatar-fallback {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--fg); color: #fff;
+    font-weight: 500; font-size: 12px;
+    border-radius: 9999px;
+  }
+
+  /* Цветовая полоска у события по ответственному */
+  .event-stripe {
+    width: 3px; border-radius: 2px; align-self: stretch;
+    background: var(--fg); opacity: .85;
+  }
+
+  /* Пуск/финиш анимации страницы */
+  .page { animation: reveal .25s ease-out both; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================== -->
+<!-- БАННЕР ДЛЯ ДЕСКТОПА                                             -->
+<!-- ============================================================== -->
+<div id="desktop-banner" class="hidden fixed inset-0 z-[90] items-center justify-center p-6" style="background: rgba(10,10,10,0.45); backdrop-filter: blur(6px);">
+  <div class="corner-card bg-white rounded-2xl p-6 max-w-md w-full relative" style="border:1px solid var(--border);">
+    <span class="cm-tr"></span><span class="cm-tl"></span>
+    <div class="text-xs uppercase tracking-widest" style="color: var(--fg-muted);">Внимание</div>
+    <h2 class="mt-2 text-xl">Приложение оптимизировано для мобильных устройств</h2>
+    <p class="mt-3 text-sm" style="color: var(--fg-secondary);">
+      Events Calendar — PWA для смартфонов и планшетов. На рабочем столе интерфейс будет отображаться в компактной мобильной рамке. Для лучшего опыта откройте ссылку на телефоне или установите приложение через меню браузера.
+    </p>
+    <div class="mt-5 flex gap-2">
+      <button id="banner-continue" class="btn-primary flex-1">Продолжить в этом режиме</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- ЭКРАН АВТОРИЗАЦИИ                                               -->
+<!-- ============================================================== -->
+<section id="auth-screen" class="hidden min-h-screen bp-grid items-center justify-center p-4 relative">
+  <div class="scan-line"></div>
+  <div class="corner-card bg-white rounded-2xl p-6 w-full max-w-sm relative reveal" style="border:1px solid var(--border);">
+    <span class="cm-tr"></span><span class="cm-tl"></span>
+
+    <div class="text-center mb-5">
+      <div class="text-[10px] uppercase tracking-[0.25em]" style="color: var(--fg-muted);">Events Calendar</div>
+      <h1 class="mt-1 text-2xl" id="auth-title">Вход в систему</h1>
+      <p class="mt-1 text-sm" style="color: var(--fg-secondary);" id="auth-subtitle">Авторизуйтесь, чтобы продолжить</p>
+    </div>
+
+    <!-- Табы -->
+    <div class="flex bg-[var(--bg-tertiary)] rounded-xl p-1 mb-4">
+      <button class="tab-btn flex-1 py-2 rounded-lg text-sm font-medium transition"
+              data-tab="login" id="tab-login">Вход</button>
+      <button class="tab-btn flex-1 py-2 rounded-lg text-sm font-medium transition"
+              data-tab="register" id="tab-register">Регистрация</button>
+    </div>
+
+    <!-- Google Sign-in -->
+    <button id="btn-google" class="btn-ghost w-full flex items-center justify-center gap-2 mb-3">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.841H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+      Войти через Google
+    </button>
+
+    <div class="flex items-center gap-3 my-4">
+      <div class="flex-1 h-px" style="background: var(--border);"></div>
+      <span class="text-xs" style="color: var(--fg-muted);">или email</span>
+      <div class="flex-1 h-px" style="background: var(--border);"></div>
+    </div>
+
+    <!-- Форма -->
+    <form id="auth-form" class="space-y-3" autocomplete="on">
+      <div id="field-name-wrap" class="hidden">
+        <label class="text-xs" style="color: var(--fg-muted);">Имя и фамилия</label>
+        <input id="field-name" type="text" class="field mt-1" placeholder="Иван Иванов" autocomplete="name" />
+      </div>
+      <div>
+        <label class="text-xs" style="color: var(--fg-muted);">Email</label>
+        <input id="field-email" type="email" class="field mt-1" placeholder="you@company.ru" autocomplete="email" required />
+      </div>
+      <div>
+        <label class="text-xs" style="color: var(--fg-muted);">Пароль</label>
+        <input id="field-password" type="password" class="field mt-1" placeholder="•••••••" autocomplete="current-password" minlength="6" required />
+      </div>
+      <button type="submit" id="btn-auth-submit" class="btn-primary w-full">Войти</button>
+    </form>
+
+    <div id="auth-error" class="hidden mt-3 text-sm text-center" style="color: var(--error);"></div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<!-- ЭКРАН ОЖИДАНИЯ / БЛОКИРОВКИ                                     -->
+<!-- ============================================================== -->
+<section id="pending-screen" class="hidden min-h-screen bp-grid items-center justify-center p-4">
+  <div class="corner-card bg-white rounded-2xl p-6 w-full max-w-sm relative reveal" style="border:1px solid var(--border);">
+    <span class="cm-tr"></span><span class="cm-tl"></span>
+    <div class="text-center">
+      <div class="text-[10px] uppercase tracking-[0.25em]" style="color: var(--fg-muted);">Статус учётной записи</div>
+      <h2 class="mt-2 text-xl" id="pending-title">Ожидает подтверждения</h2>
+      <p class="mt-3 text-sm" style="color: var(--fg-secondary);" id="pending-text">
+        Ваша учётная запись зарегистрирована. Доступ откроется после подтверждения администратором.
+      </p>
+      <div class="mt-5 flex flex-col gap-2">
+        <button id="btn-refresh" class="btn-primary">Обновить статус</button>
+        <button id="btn-logout-pending" class="btn-ghost">Выйти</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<!-- ОСНОВНОЙ ЭКРАН                                                  -->
+<!-- ============================================================== -->
+<section id="app-screen" class="hidden">
+  <div class="app-frame">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between px-4 pt-4 pb-2" style="padding-top: calc(16px + var(--safe-top));">
+      <div class="flex items-center gap-3">
+        <div class="text-[10px] uppercase tracking-[0.2em]" style="color: var(--fg-muted);">Events</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-admin" class="hidden p-2 rounded-lg" style="border:1px solid var(--border);" title="Администрирование">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3Z"/>
+          </svg>
+        </button>
+        <button id="btn-user-menu" class="flex items-center gap-2 p-1 pr-2 rounded-full" style="border:1px solid var(--border);">
+          <span id="user-avatar" class="avatar-fallback w-7 h-7">?</span>
+          <span id="user-name" class="text-sm font-medium truncate max-w-[120px]">—</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Навигация по месяцу -->
+    <div class="flex items-center justify-between px-4 py-3">
+      <button id="btn-prev-month" class="p-2 rounded-lg" style="border:1px solid var(--border);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="text-center">
+        <div id="month-label" class="text-lg font-semibold">—</div>
+        <button id="btn-today" class="text-[11px] uppercase tracking-widest" style="color: var(--fg-muted);">Сегодня</button>
+      </div>
+      <button id="btn-next-month" class="p-2 rounded-lg" style="border:1px solid var(--border);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+    <!-- Календарь -->
+    <div id="calendar-wrap" class="px-3 pb-2 select-none">
+      <!-- Дни недели -->
+      <div class="cal-grid mb-1">
+        <div class="text-center text-[11px] font-medium py-1" style="color: var(--fg-muted);">Пн</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color: var(--fg-muted);">Вт</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color: var(--fg-muted);">Ср</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color: var(--fg-muted);">Чт</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color: var(--fg-muted);">Пт</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color: var(--error);">Сб</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color: var(--error);">Вс</div>
+      </div>
+      <div id="calendar-grid" class="cal-grid gap-1"></div>
+    </div>
+
+    <!-- Кнопка добавления для выбранного дня -->
+    <div class="px-4 pt-1 pb-3 flex items-center justify-between">
+      <div>
+        <div id="selected-date-label" class="text-sm font-medium">—</div>
+        <div id="selected-date-sub" class="text-xs" style="color: var(--fg-muted);">выбран</div>
+      </div>
+      <button id="btn-new-event" class="btn-primary text-sm" style="padding: 10px 14px;">+ Мероприятие</button>
+    </div>
+
+    <!-- Список событий от сегодняшнего дня -->
+    <div class="px-4 pb-28">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold">Ближайшие мероприятия</h3>
+        <span id="events-count" class="text-xs" style="color: var(--fg-muted);">0</span>
+      </div>
+      <div id="events-list" class="space-y-2"></div>
+      <div id="events-empty" class="hidden text-center py-10 text-sm" style="color: var(--fg-muted);">
+        Пока нет ближайших мероприятий
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<!-- МОДАЛКА: МЕНЮ ПОЛЬЗОВАТЕЛЯ                                      -->
+<!-- ============================================================== -->
+<div id="user-menu" class="hidden">
+  <div class="modal-backdrop" data-close="user-menu"></div>
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="px-5 pt-4 pb-6">
+      <div class="flex items-center gap-3 mb-5">
+        <span id="menu-avatar" class="avatar-fallback w-12 h-12 text-base">?</span>
+        <div class="min-w-0">
+          <div id="menu-name" class="font-semibold truncate">—</div>
+          <div id="menu-email" class="text-xs truncate" style="color: var(--fg-muted);">—</div>
+        </div>
+      </div>
+      <div class="space-y-2">
+        <button id="btn-logout" class="btn-ghost w-full text-left">Выйти</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- МОДАЛКА: СОЗДАНИЕ / РЕДАКТИРОВАНИЕ СОБЫТИЯ                      -->
+<!-- ============================================================== -->
+<div id="event-modal" class="hidden">
+  <div class="modal-backdrop" data-close="event-modal"></div>
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="px-5 pt-4 pb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 id="event-modal-title" class="text-lg font-semibold">Новое мероприятие</h3>
+        <button data-close="event-modal" class="p-2 -mr-2 rounded-lg" style="color: var(--fg-muted);">✕</button>
+      </div>
+
+      <form id="event-form" class="space-y-3">
+        <div>
+          <label class="text-xs" style="color: var(--fg-muted);">Название</label>
+          <input id="ef-title" type="text" class="field mt-1" placeholder="Например: Выезд на объект" required maxlength="200" />
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="col-span-3 sm:col-span-1">
+            <label class="text-xs" style="color: var(--fg-muted);">Дата</label>
+            <input id="ef-date" type="date" class="field mt-1" required />
+          </div>
+          <div>
+            <label class="text-xs" style="color: var(--fg-muted);">С</label>
+            <input id="ef-start" type="time" class="field mt-1" required />
+          </div>
+          <div>
+            <label class="text-xs" style="color: var(--fg-muted);">До</label>
+            <input id="ef-end" type="time" class="field mt-1" required />
+          </div>
+        </div>
+        <div>
+          <label class="text-xs" style="color: var(--fg-muted);">Ответственный</label>
+          <select id="ef-responsible" class="field mt-1"></select>
+        </div>
+
+        <div class="flex gap-2 pt-1">
+          <button type="submit" class="btn-primary flex-1">Сохранить</button>
+          <button type="button" id="ef-delete" class="btn-ghost hidden" style="color: var(--error); border-color: rgba(220,38,38,.3);">Удалить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- МОДАЛКА: ПРОСМОТР СОБЫТИЯ (с to-do)                             -->
+<!-- ============================================================== -->
+<div id="event-view" class="hidden">
+  <div class="modal-backdrop" data-close="event-view"></div>
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="px-5 pt-4 pb-6">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="min-w-0">
+          <div id="ev-date" class="text-xs" style="color: var(--fg-muted);">—</div>
+          <h3 id="ev-title" class="text-lg font-semibold mt-0.5 break-words">—</h3>
+          <div id="ev-time" class="text-sm mt-0.5" style="color: var(--fg-secondary);">—</div>
+          <div class="mt-2 flex items-center gap-2">
+            <span id="ev-resp-avatar" class="avatar-fallback w-6 h-6 text-[10px]">?</span>
+            <span id="ev-resp-name" class="text-sm">—</span>
+            <span class="badge badge-muted">ответственный</span>
+          </div>
+        </div>
+        <div class="flex gap-1 flex-shrink-0">
+          <button id="ev-edit" class="p-2 rounded-lg" style="border:1px solid var(--border);" title="Редактировать">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15H9v-3Z"/></svg>
+          </button>
+          <button data-close="event-view" class="p-2 rounded-lg" style="border:1px solid var(--border);">✕</button>
+        </div>
+      </div>
+
+      <!-- Материалы -->
+      <div class="mt-4">
+        <div class="flex items-center justify-between mb-2">
+          <h4 class="text-sm font-semibold">Требуемые материалы</h4>
+          <span id="materials-count" class="text-xs" style="color: var(--fg-muted);">0</span>
+        </div>
+        <div id="materials-list" class="space-y-1.5"></div>
+        <div class="flex gap-2 mt-2">
+          <input id="new-material" class="field text-sm" placeholder="Добавить материал…" style="padding:10px 12px;" />
+          <button id="btn-add-material" class="btn-primary text-sm" style="padding:10px 12px;">+</button>
+        </div>
+      </div>
+
+      <!-- Действия -->
+      <div class="mt-5">
+        <div class="flex items-center justify-between mb-2">
+          <h4 class="text-sm font-semibold">Список действий</h4>
+          <span id="actions-count" class="text-xs" style="color: var(--fg-muted);">0</span>
+        </div>
+        <div id="actions-list" class="space-y-1.5"></div>
+        <div class="flex gap-2 mt-2">
+          <input id="new-action" class="field text-sm" placeholder="Добавить действие…" style="padding:10px 12px;" />
+          <button id="btn-add-action" class="btn-primary text-sm" style="padding:10px 12px;">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- МОДАЛКА: АДМИНИСТРИРОВАНИЕ                                       -->
+<!-- ============================================================== -->
+<div id="admin-modal" class="hidden">
+  <div class="modal-backdrop" data-close="admin-modal"></div>
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="px-5 pt-4 pb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">Администрирование</h3>
+        <button data-close="admin-modal" class="p-2 -mr-2 rounded-lg" style="color: var(--fg-muted);">✕</button>
+      </div>
+
+      <!-- Табы -->
+      <div class="flex bg-[var(--bg-tertiary)] rounded-xl p-1 mb-4">
+        <button class="admin-tab flex-1 py-2 rounded-lg text-sm font-medium" data-adm="users">Пользователи</button>
+        <button class="admin-tab flex-1 py-2 rounded-lg text-sm font-medium" data-adm="logs">Журнал</button>
+      </div>
+
+      <!-- Пользователи -->
+      <div id="adm-users" class="space-y-2"></div>
+
+      <!-- Логи -->
+      <div id="adm-logs" class="hidden space-y-1.5 max-h-[60vh] overflow-y-auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- TOASTS                                                          -->
+<!-- ============================================================== -->
+<div id="toasts" class="fixed bottom-5 left-0 right-0 z-[80] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
+
+<!-- ============================================================== -->
+<!-- СКРИПТ                                                          -->
+<!-- ============================================================== -->
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+
+  // ===== CONFIG =====
+  const SUPABASE_URL  = 'https://miczhzjdieqwxmfqkfgn.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pY3poempkaWVxd3htZnFrZmduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNTA3NDAsImV4cCI6MjA5MjYyNjc0MH0.O1eTKfEq-aUyDuiqQ_xod01eDyiVNzPPjDWECatjI9U';
+
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+
+  // ===== STATE =====
+  const state = {
+    session: null,
+    me: null,                // public.users запись
+    activeUsers: [],         // список активных юзеров (для селекта ответственного)
+    currentMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    selectedDate: new Date(),
+    events: [],              // все события (в пределах отображаемого диапазона)
+    openedEventId: null,
+    editingEventId: null,
+    authMode: 'login',       // login | register
+    realtimeChannels: [],
+  };
+
+  // ===== UTILS =====
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+  const pad = n => String(n).padStart(2, '0');
+  const toDateInput = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const fromDateInput = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); };
+  const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+
+  const ruMonths = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const ruMonthsNom = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const ruWeekdays = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+
+  function formatDateLong(d){ return `${d.getDate()} ${ruMonths[d.getMonth()]} ${d.getFullYear()} г.`; }
+  function formatTime(t){ if(!t) return ''; return t.slice(0,5); } // HH:MM
+  function weekdayRu(d){ return ruWeekdays[d.getDay()]; }
+
+  function initials(name, email){
+    const src = (name || email || '?').trim();
+    const parts = src.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return src.slice(0,2).toUpperCase();
+  }
+
+  function toast(msg, kind='info', ms=2500){
+    const el = document.createElement('div');
+    el.className = 'toast pointer-events-auto';
+    if (kind === 'error')   el.style.background = 'var(--error)';
+    if (kind === 'success') el.style.background = 'var(--success)';
+    el.textContent = msg;
+    $('#toasts').appendChild(el);
+    setTimeout(()=> el.remove(), ms);
+  }
+
+  function show(id){ $(`#${id}`).classList.remove('hidden'); $(`#${id}`).classList.add('flex'); }
+  function hide(id){ const el=$(`#${id}`); el.classList.add('hidden'); el.classList.remove('flex'); }
+  function open(id){ $(`#${id}`).classList.remove('hidden'); }
+  function close(id){ $(`#${id}`).classList.add('hidden'); }
+
+  // Закрытие модалок по backdrop или кнопке
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-close]');
+    if (t) close(t.getAttribute('data-close'));
+  });
+
+  // ===== DESKTOP BANNER =====
+  function checkDesktop(){
+    const isDesktop = window.matchMedia('(min-width: 900px) and (pointer: fine)').matches;
+    const dismissed = sessionStorage.getItem('desktop_banner_dismissed');
+    if (isDesktop && !dismissed){
+      $('#desktop-banner').classList.remove('hidden');
+      $('#desktop-banner').classList.add('flex');
+    }
+  }
+  $('#banner-continue').addEventListener('click', () => {
+    sessionStorage.setItem('desktop_banner_dismissed','1');
+    hide('desktop-banner');
+  });
+
+  // ===== AUTH UI =====
+  function setAuthTab(mode){
+    state.authMode = mode;
+    $('#tab-login').classList.toggle('bg-white', mode==='login');
+    $('#tab-login').style.boxShadow = mode==='login' ? '0 1px 2px rgba(0,0,0,.05)' : '';
+    $('#tab-register').classList.toggle('bg-white', mode==='register');
+    $('#tab-register').style.boxShadow = mode==='register' ? '0 1px 2px rgba(0,0,0,.05)' : '';
+    $('#auth-title').textContent = mode==='login' ? 'Вход в систему' : 'Регистрация';
+    $('#auth-subtitle').textContent = mode==='login' ? 'Авторизуйтесь, чтобы продолжить' : 'Создайте учётную запись';
+    $('#btn-auth-submit').textContent = mode==='login' ? 'Войти' : 'Зарегистрироваться';
+    $('#field-name-wrap').classList.toggle('hidden', mode==='login');
+    $('#field-password').autocomplete = mode==='login' ? 'current-password' : 'new-password';
+    $('#auth-error').classList.add('hidden');
+  }
+  $$('.tab-btn').forEach(b => b.addEventListener('click', () => setAuthTab(b.dataset.tab)));
+
+  $('#btn-google').addEventListener('click', async () => {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+    if (error) showAuthError(error.message);
+  });
+
+  $('#auth-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = $('#field-email').value.trim();
+    const password = $('#field-password').value;
+    const name = $('#field-name').value.trim();
+    $('#btn-auth-submit').disabled = true;
+    try{
+      if (state.authMode === 'login') {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        const { error } = await sb.auth.signUp({
+          email, password,
+          options: { data: { full_name: name || email.split('@')[0] } }
+        });
+        if (error) throw error;
+      }
+    } catch(err) {
+      showAuthError(err.message);
+    } finally {
+      $('#btn-auth-submit').disabled = false;
+    }
+  });
+
+  function showAuthError(msg){
+    const el = $('#auth-error');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+
+  // ===== ROUTE =====
+  async function route(){
+    const { data: { session } } = await sb.auth.getSession();
+    state.session = session;
+
+    if (!session) {
+      hide('app-screen'); hide('pending-screen');
+      show('auth-screen'); setAuthTab('login');
+      return;
+    }
+
+    // загрузим/дождёмся профиля
+    const me = await loadMe();
+    if (!me) {
+      // профиль ещё не создался (триггер) — подождём чуть-чуть
+      await new Promise(r => setTimeout(r, 600));
+      const me2 = await loadMe();
+      if (!me2) {
+        showAuthError('Не удалось получить профиль. Попробуйте перезайти.');
+        await sb.auth.signOut();
+        return route();
+      }
+      state.me = me2;
+    } else {
+      state.me = me;
+    }
+
+    if (state.me.status !== 'active') {
+      hide('auth-screen'); hide('app-screen');
+      show('pending-screen');
+      if (state.me.status === 'blocked') {
+        $('#pending-title').textContent = 'Учётная запись заблокирована';
+        $('#pending-text').textContent = 'Доступ к приложению закрыт администратором.';
+      } else {
+        $('#pending-title').textContent = 'Ожидает подтверждения';
+        $('#pending-text').textContent = 'Ваша учётная запись зарегистрирована. Доступ откроется после подтверждения администратором.';
+      }
+      return;
+    }
+
+    // active → приложение
+    hide('auth-screen'); hide('pending-screen');
+    show('app-screen');
+    await bootApp();
+  }
+
+  async function loadMe(){
+    const { data, error } = await sb.from('users').select('*').eq('id', state.session.user.id).maybeSingle();
+    if (error) { console.error(error); return null; }
+    return data;
+  }
+
+  $('#btn-refresh').addEventListener('click', () => route());
+  $('#btn-logout-pending').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    location.reload();
+  });
+
+  // Переподписка на изменения auth
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session && !state.session) {
+      await sb.rpc('log_action', { p_action_type: 'auth.login', p_entity_type: 'auth', p_entity_id: session.user.id, p_details: { provider: session.user.app_metadata?.provider || 'email' } });
+    }
+    if (event === 'SIGNED_OUT') {
+      unsubscribeRealtime();
+    }
+    state.session = session;
+    await route();
+  });
+
+  // ===== APP =====
+  async function bootApp(){
+    // шапка пользователя
+    renderMe();
+    // админская кнопка
+    $('#btn-admin').classList.toggle('hidden', state.me.role !== 'admin');
+
+    // загрузить активных пользователей для селекта ответственных
+    await loadActiveUsers();
+
+    // Сегодня по умолчанию выбран
+    state.selectedDate = new Date();
+    state.currentMonth = new Date(state.selectedDate.getFullYear(), state.selectedDate.getMonth(), 1);
+
+    await loadEvents();
+    renderCalendar();
+    renderEventsList();
+    setupRealtime();
+  }
+
+  function renderMe(){
+    $('#user-name').textContent = state.me.full_name || state.me.email;
+    $('#menu-name').textContent = state.me.full_name || '—';
+    $('#menu-email').textContent = state.me.email;
+    const av = $('#user-avatar'), mav = $('#menu-avatar');
+    const ini = initials(state.me.full_name, state.me.email);
+    av.textContent = ini; mav.textContent = ini;
+  }
+
+  async function loadActiveUsers(){
+    const { data, error } = await sb.from('users')
+      .select('id, full_name, email, avatar_url, role')
+      .eq('status','active')
+      .order('full_name', { ascending: true });
+    if (!error) state.activeUsers = data || [];
+  }
+
+  // ===== CALENDAR =====
+  function renderCalendar(){
+    const first = new Date(state.currentMonth);
+    const label = `${ruMonthsNom[first.getMonth()]} ${first.getFullYear()}`;
+    $('#month-label').textContent = label;
+
+    const grid = $('#calendar-grid');
+    grid.innerHTML = '';
+
+    // Начало сетки — понедельник недели, содержащей 1-е число
+    const firstDow = (first.getDay() + 6) % 7; // пн=0
+    const start = new Date(first); start.setDate(1 - firstDow);
+
+    // 6 недель × 7 дней = 42 ячейки
+    const today = new Date();
+    const selDate = state.selectedDate;
+    const currentMonthIdx = first.getMonth();
+
+    // Посчитаем количество событий по дням для быстрого отображения
+    const byDay = new Map();
+    for (const ev of state.events) {
+      byDay.set(ev.event_date, (byDay.get(ev.event_date) || 0) + 1);
+    }
+
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+      if (d.getMonth() !== currentMonthIdx) cell.classList.add('is-other-month');
+      if (sameDay(d, today)) cell.classList.add('is-today');
+      if (sameDay(d, selDate)) cell.classList.add('is-selected');
+
+      const num = document.createElement('div');
+      num.className = 'text-sm';
+      num.textContent = d.getDate();
+      cell.appendChild(num);
+
+      const cnt = byDay.get(toDateInput(d)) || 0;
+      if (cnt > 0) {
+        const dots = document.createElement('div');
+        dots.className = 'cell-dots';
+        const dn = Math.min(cnt, 3);
+        for (let k = 0; k < dn; k++) {
+          const dot = document.createElement('div');
+          dot.className = 'cell-dot';
+          dots.appendChild(dot);
+        }
+        cell.appendChild(dots);
+      }
+
+      cell.addEventListener('click', () => {
+        state.selectedDate = d;
+        renderCalendar();
+        updateSelectedDateLabel();
+        renderEventsList();
+      });
+      grid.appendChild(cell);
+    }
+
+    updateSelectedDateLabel();
+  }
+
+  function updateSelectedDateLabel(){
+    $('#selected-date-label').textContent = formatDateLong(state.selectedDate);
+    $('#selected-date-sub').textContent = weekdayRu(state.selectedDate) + ' · выбран';
+  }
+
+  $('#btn-prev-month').addEventListener('click', async () => {
+    state.currentMonth = new Date(state.currentMonth.getFullYear(), state.currentMonth.getMonth()-1, 1);
+    await loadEvents(); renderCalendar();
+  });
+  $('#btn-next-month').addEventListener('click', async () => {
+    state.currentMonth = new Date(state.currentMonth.getFullYear(), state.currentMonth.getMonth()+1, 1);
+    await loadEvents(); renderCalendar();
+  });
+  $('#btn-today').addEventListener('click', async () => {
+    state.selectedDate = new Date();
+    state.currentMonth = new Date(state.selectedDate.getFullYear(), state.selectedDate.getMonth(), 1);
+    await loadEvents(); renderCalendar(); renderEventsList();
+  });
+
+  // ===== SWIPE =====
+  (function initSwipe(){
+    const wrap = $('#calendar-wrap');
+    let startX = 0, startY = 0, tracking = false;
+    wrap.addEventListener('pointerdown', e => {
+      tracking = true; startX = e.clientX; startY = e.clientY;
+    });
+    wrap.addEventListener('pointerup', e => {
+      if (!tracking) return; tracking = false;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        if (dx < 0) $('#btn-next-month').click();
+        else        $('#btn-prev-month').click();
+      }
+    });
+    wrap.addEventListener('pointercancel', () => tracking = false);
+  })();
+
+  // ===== EVENTS: LOAD =====
+  async function loadEvents(){
+    // загружаем с первой видимой недели отображаемого месяца по последнюю
+    const first = new Date(state.currentMonth);
+    const firstDow = (first.getDay() + 6) % 7;
+    const from = new Date(first); from.setDate(1 - firstDow);
+    const to = new Date(from); to.setDate(from.getDate() + 42);
+
+    const { data, error } = await sb.from('events')
+      .select('*')
+      .gte('event_date', toDateInput(from))
+      .lt('event_date',  toDateInput(to))
+      .order('event_date', { ascending: true })
+      .order('time_start', { ascending: true });
+
+    if (error) { console.error(error); toast('Ошибка загрузки событий', 'error'); return; }
+    state.events = data || [];
+  }
+
+  // ===== EVENTS LIST (под календарём, от сегодня) =====
+  function renderEventsList(){
+    const todayStr = toDateInput(new Date());
+    const upcoming = state.events
+      .filter(ev => ev.event_date >= todayStr)
+      .sort((a,b) => a.event_date.localeCompare(b.event_date) || a.time_start.localeCompare(b.time_start));
+
+    const list = $('#events-list');
+    list.innerHTML = '';
+    $('#events-count').textContent = upcoming.length;
+    $('#events-empty').classList.toggle('hidden', upcoming.length > 0);
+
+    // Группируем по датам
+    let curDate = null;
+    for (const ev of upcoming) {
+      if (ev.event_date !== curDate) {
+        curDate = ev.event_date;
+        const head = document.createElement('div');
+        head.className = 'text-[11px] uppercase tracking-widest pt-2';
+        head.style.color = 'var(--fg-muted)';
+        const d = fromDateInput(ev.event_date);
+        head.textContent = `${d.getDate()} ${ruMonths[d.getMonth()]} · ${weekdayRu(d)}`;
+        list.appendChild(head);
+      }
+      const resp = state.activeUsers.find(u => u.id === ev.responsible_id);
+      const card = document.createElement('div');
+      card.className = 'event-card flex items-center gap-3 cursor-pointer';
+      card.innerHTML = `
+        <div class="event-stripe"></div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium truncate">${escapeHtml(ev.title)}</div>
+          <div class="text-xs mt-0.5" style="color: var(--fg-muted);">
+            ${formatTime(ev.time_start)}–${formatTime(ev.time_end)}
+            ${resp ? ' · ' + escapeHtml(resp.full_name || resp.email) : ''}
+          </div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-muted); flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
+      `;
+      card.addEventListener('click', () => openEventView(ev.id));
+      list.appendChild(card);
+    }
+  }
+
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ===== CREATE / EDIT EVENT =====
+  $('#btn-new-event').addEventListener('click', () => openEventForm(null));
+
+  function openEventForm(eventId){
+    state.editingEventId = eventId;
+    $('#event-modal-title').textContent = eventId ? 'Редактировать мероприятие' : 'Новое мероприятие';
+
+    // Ответственные — селект
+    const sel = $('#ef-responsible');
+    sel.innerHTML = '';
+    state.activeUsers.forEach(u => {
+      const opt = document.createElement('option');
+      opt.value = u.id; opt.textContent = u.full_name || u.email;
+      sel.appendChild(opt);
+    });
+
+    if (eventId) {
+      const ev = state.events.find(e => e.id === eventId);
+      if (!ev) return;
+      $('#ef-title').value   = ev.title;
+      $('#ef-date').value    = ev.event_date;
+      $('#ef-start').value   = (ev.time_start || '').slice(0,5);
+      $('#ef-end').value     = (ev.time_end   || '').slice(0,5);
+      $('#ef-responsible').value = ev.responsible_id || state.me.id;
+      $('#ef-delete').classList.remove('hidden');
+    } else {
+      $('#ef-title').value = '';
+      $('#ef-date').value  = toDateInput(state.selectedDate);
+      $('#ef-start').value = '09:00';
+      $('#ef-end').value   = '10:00';
+      $('#ef-responsible').value = state.me.id;
+      $('#ef-delete').classList.add('hidden');
+    }
+
+    open('event-modal');
+  }
+
+  $('#event-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      title: $('#ef-title').value.trim(),
+      event_date: $('#ef-date').value,
+      time_start: $('#ef-start').value + ':00',
+      time_end:   $('#ef-end').value   + ':00',
+      responsible_id: $('#ef-responsible').value || state.me.id,
+    };
+    if (payload.time_end <= payload.time_start) {
+      toast('Время окончания должно быть позже начала', 'error'); return;
+    }
+
+    if (state.editingEventId) {
+      const { error } = await sb.from('events').update(payload).eq('id', state.editingEventId);
+      if (error) { toast(error.message, 'error'); return; }
+      toast('Сохранено', 'success');
+    } else {
+      const insertRow = { ...payload, created_by: state.me.id };
+      const { data, error } = await sb.from('events').insert(insertRow).select().single();
+      if (error) { toast(error.message, 'error'); return; }
+      state.events.push(data);
+      toast('Мероприятие создано', 'success');
+    }
+    close('event-modal');
+    await loadEvents();
+    renderCalendar();
+    renderEventsList();
+  });
+
+  $('#ef-delete').addEventListener('click', async () => {
+    if (!state.editingEventId) return;
+    if (!confirm('Удалить мероприятие безвозвратно?')) return;
+    const { error } = await sb.from('events').delete().eq('id', state.editingEventId);
+    if (error) { toast(error.message, 'error'); return; }
+    close('event-modal'); close('event-view');
+    toast('Удалено', 'success');
+    await loadEvents(); renderCalendar(); renderEventsList();
+  });
+
+  // ===== EVENT VIEW (с чек-листами) =====
+  async function openEventView(eventId){
+    state.openedEventId = eventId;
+    const ev = state.events.find(e => e.id === eventId);
+    if (!ev) return;
+
+    const d = fromDateInput(ev.event_date);
+    $('#ev-date').textContent  = `${formatDateLong(d)} · ${weekdayRu(d)}`;
+    $('#ev-title').textContent = ev.title;
+    $('#ev-time').textContent  = `${formatTime(ev.time_start)} – ${formatTime(ev.time_end)}`;
+
+    const resp = state.activeUsers.find(u => u.id === ev.responsible_id);
+    if (resp) {
+      $('#ev-resp-avatar').textContent = initials(resp.full_name, resp.email);
+      $('#ev-resp-name').textContent = resp.full_name || resp.email;
+    } else {
+      $('#ev-resp-avatar').textContent = '?';
+      $('#ev-resp-name').textContent = 'не назначен';
+    }
+
+    await reloadChecklists(eventId);
+    open('event-view');
+  }
+
+  $('#ev-edit').addEventListener('click', () => {
+    if (!state.openedEventId) return;
+    close('event-view');
+    openEventForm(state.openedEventId);
+  });
+
+  async function reloadChecklists(eventId){
+    const [m, a] = await Promise.all([
+      sb.from('event_materials').select('*').eq('event_id', eventId).order('order_index', { ascending: true }).order('created_at', { ascending: true }),
+      sb.from('event_actions'  ).select('*').eq('event_id', eventId).order('order_index', { ascending: true }).order('created_at', { ascending: true }),
+    ]);
+    renderChecklist('materials', m.data || []);
+    renderChecklist('actions',   a.data || []);
+  }
+
+  function renderChecklist(kind, items){
+    const list = $(`#${kind}-list`);
+    $(`#${kind}-count`).textContent = `${items.filter(i=>i.is_done).length}/${items.length}`;
+    list.innerHTML = '';
+    for (const it of items) {
+      const row = document.createElement('div');
+      row.className = 'p-2 rounded-lg';
+      row.style.background = 'var(--bg-secondary)';
+
+      const mainLine = document.createElement('div');
+      mainLine.className = 'flex items-center gap-2';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.className = 'check';
+      cb.checked = it.is_done;
+      cb.addEventListener('change', async () => {
+        const rpc = kind === 'materials' ? 'toggle_material' : 'toggle_action';
+        const { error } = await sb.rpc(rpc, { p_id: it.id, p_done: cb.checked });
+        if (error) { toast(error.message, 'error'); cb.checked = !cb.checked; return; }
+        await reloadChecklists(state.openedEventId);
+      });
+
+      const ttl = document.createElement('div');
+      ttl.className = 'flex-1 text-sm';
+      ttl.style.textDecoration = it.is_done ? 'line-through' : 'none';
+      ttl.style.color = it.is_done ? 'var(--fg-muted)' : 'var(--fg)';
+      ttl.textContent = it.title;
+
+      const del = document.createElement('button');
+      del.innerHTML = '✕';
+      del.className = 'text-xs p-1';
+      del.style.color = 'var(--fg-muted)';
+      del.addEventListener('click', async () => {
+        if (!confirm('Удалить пункт?')) return;
+        const tbl = kind === 'materials' ? 'event_materials' : 'event_actions';
+        const { error } = await sb.from(tbl).delete().eq('id', it.id);
+        if (error) { toast(error.message, 'error'); return; }
+        await reloadChecklists(state.openedEventId);
+      });
+
+      mainLine.append(cb, ttl, del);
+      row.appendChild(mainLine);
+
+      // Подпись "кем выполнено"
+      if (it.is_done && it.done_by) {
+        const u = state.activeUsers.find(x => x.id === it.done_by);
+        const meta = document.createElement('div');
+        meta.className = 'flex items-center gap-1.5 mt-1 pl-7 text-[11px]';
+        meta.style.color = 'var(--fg-muted)';
+        meta.innerHTML = `
+          <span class="avatar-fallback w-4 h-4 text-[9px]" style="opacity:.7;">${escapeHtml(initials(u?.full_name, u?.email))}</span>
+          <span>отметил(а) ${escapeHtml(u?.full_name || u?.email || '—')}${it.done_at ? ' · ' + new Date(it.done_at).toLocaleString('ru-RU', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'}) : ''}</span>
+        `;
+        row.appendChild(meta);
+      }
+
+      list.appendChild(row);
+    }
+  }
+
+  async function addChecklistItem(kind){
+    const field = kind === 'materials' ? $('#new-material') : $('#new-action');
+    const val = field.value.trim();
+    if (!val) return;
+    const tbl = kind === 'materials' ? 'event_materials' : 'event_actions';
+    const { error } = await sb.from(tbl).insert({
+      event_id: state.openedEventId, title: val, created_by: state.me.id
+    });
+    if (error) { toast(error.message, 'error'); return; }
+    field.value = '';
+    await reloadChecklists(state.openedEventId);
+  }
+  $('#btn-add-material').addEventListener('click', () => addChecklistItem('materials'));
+  $('#btn-add-action')  .addEventListener('click', () => addChecklistItem('actions'));
+  $('#new-material').addEventListener('keydown', e => { if (e.key==='Enter') addChecklistItem('materials'); });
+  $('#new-action').addEventListener('keydown',   e => { if (e.key==='Enter') addChecklistItem('actions'); });
+
+  // ===== USER MENU =====
+  $('#btn-user-menu').addEventListener('click', () => open('user-menu'));
+  $('#btn-logout').addEventListener('click', async () => {
+    await sb.rpc('log_action', { p_action_type: 'auth.logout', p_entity_type: 'auth', p_entity_id: state.session?.user?.id || null });
+    await sb.auth.signOut();
+    location.reload();
+  });
+
+  // ===== ADMIN =====
+  $('#btn-admin').addEventListener('click', async () => {
+    setAdminTab('users');
+    open('admin-modal');
+    await loadAdminUsers();
+  });
+  $$('.admin-tab').forEach(b => b.addEventListener('click', async () => {
+    setAdminTab(b.dataset.adm);
+    if (b.dataset.adm === 'users') await loadAdminUsers();
+    else                            await loadAdminLogs();
+  }));
+
+  function setAdminTab(kind){
+    $$('.admin-tab').forEach(b => {
+      const active = b.dataset.adm === kind;
+      b.classList.toggle('bg-white', active);
+      b.style.boxShadow = active ? '0 1px 2px rgba(0,0,0,.05)' : '';
+    });
+    $('#adm-users').classList.toggle('hidden', kind !== 'users');
+    $('#adm-logs').classList.toggle('hidden',  kind !== 'logs');
+  }
+
+  async function loadAdminUsers(){
+    const { data, error } = await sb.from('users').select('*').order('created_at', { ascending: false });
+    if (error) { toast(error.message, 'error'); return; }
+    const host = $('#adm-users'); host.innerHTML = '';
+    for (const u of data) {
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-3 p-3 rounded-xl';
+      row.style.border = '1px solid var(--border)';
+      row.innerHTML = `
+        <span class="avatar-fallback w-9 h-9 text-xs flex-shrink-0">${escapeHtml(initials(u.full_name, u.email))}</span>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium truncate">${escapeHtml(u.full_name || '—')}</div>
+          <div class="text-xs truncate" style="color: var(--fg-muted);">${escapeHtml(u.email)}</div>
+          <div class="mt-1 flex gap-1.5 flex-wrap">
+            <span class="badge ${u.role==='admin'?'badge-info':'badge-muted'}">${u.role}</span>
+            <span class="badge ${u.status==='active'?'badge-success':u.status==='pending'?'badge-warning':'badge-error'}">${u.status}</span>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1 flex-shrink-0">
+          ${u.id === state.me.id ? '<span class="text-[10px]" style="color: var(--fg-muted);">это вы</span>' : `
+            <select data-action="status" data-uid="${u.id}" class="field text-xs" style="padding:6px 8px;">
+              <option value="pending"  ${u.status==='pending'?'selected':''}>pending</option>
+              <option value="active"   ${u.status==='active'?'selected':''}>active</option>
+              <option value="blocked"  ${u.status==='blocked'?'selected':''}>blocked</option>
+            </select>
+          `}
+        </div>
+      `;
+      host.appendChild(row);
+    }
+    host.querySelectorAll('[data-action="status"]').forEach(sel => {
+      sel.addEventListener('change', async () => {
+        const uid = sel.dataset.uid;
+        const newStatus = sel.value;
+        const { error } = await sb.from('users').update({ status: newStatus }).eq('id', uid);
+        if (error) { toast(error.message, 'error'); return; }
+        toast('Статус обновлён','success');
+        await loadAdminUsers();
+        await loadActiveUsers();
+      });
+    });
+  }
+
+  async function loadAdminLogs(){
+    const { data, error } = await sb.from('action_logs')
+      .select('*').order('created_at', { ascending: false }).limit(200);
+    if (error) { toast(error.message, 'error'); return; }
+    const host = $('#adm-logs'); host.innerHTML = '';
+    for (const l of data) {
+      const when = new Date(l.created_at).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      const row = document.createElement('div');
+      row.className = 'p-2.5 rounded-lg text-xs';
+      row.style.background = 'var(--bg-secondary)';
+      row.innerHTML = `
+        <div class="flex items-center justify-between gap-2">
+          <div class="font-medium">${escapeHtml(l.action_type)}</div>
+          <div style="color: var(--fg-muted);">${when}</div>
+        </div>
+        <div class="mt-0.5" style="color: var(--fg-secondary);">${escapeHtml(l.user_email || '—')}</div>
+        ${l.details && Object.keys(l.details).length ? `<pre class="mt-1 text-[11px] whitespace-pre-wrap" style="color: var(--fg-muted);">${escapeHtml(JSON.stringify(l.details, null, 0))}</pre>` : ''}
+      `;
+      host.appendChild(row);
+    }
+  }
+
+  // ===== REALTIME =====
+  function setupRealtime(){
+    unsubscribeRealtime();
+    const chEvents = sb.channel('rt-events')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, async () => {
+        await loadEvents(); renderCalendar(); renderEventsList();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_materials' }, async () => {
+        if (state.openedEventId) await reloadChecklists(state.openedEventId);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_actions' }, async () => {
+        if (state.openedEventId) await reloadChecklists(state.openedEventId);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, async (payload) => {
+        // если меня заблокировали / активировали — перемаршрутизируем
+        if (payload.new?.id === state.me?.id) {
+          state.me = payload.new;
+          if (state.me.status !== 'active') return route();
+          renderMe();
+        }
+        await loadActiveUsers();
+      })
+      .subscribe();
+    state.realtimeChannels.push(chEvents);
+  }
+  function unsubscribeRealtime(){
+    for (const ch of state.realtimeChannels) sb.removeChannel(ch);
+    state.realtimeChannels = [];
+  }
+
+  // ===== INIT =====
+  (async function init(){
+    checkDesktop();
+    await route();
+  })();
+
+</script>
+</body>
+</html>
