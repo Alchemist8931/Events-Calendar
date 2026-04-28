@@ -666,47 +666,80 @@
 
   // ===== ROUTE =====
   async function route(){
-    const { data: { session } } = await sb.auth.getSession();
-    state.session = session;
+  let session = null;
+  try {
+    const res = await sb.auth.getSession();
+    session = res.data?.session || null;
+  } catch (e) {
+    console.warn('getSession failed:', e);
+  }
+  state.session = session;
 
-    if (!session) {
+  if (!session) {
+    hide('app-screen'); hide('pending-screen');
+    show('auth-screen');
+    return;
+  }
+
+  // Пробуем получить профиль. Если получаем 401/403 — токен битый, чистим и на вход.
+  let me = null;
+  try {
+    const r = await sb.from('users').select('*').eq('id', session.user.id).maybeSingle();
+    if (r.error) {
+      const code = r.error.code || '';
+      const msg  = (r.error.message || '').toLowerCase();
+      if (code === 'PGRST301' || msg.includes('jwt') || msg.includes('invalid') || msg.includes('expired')) {
+        await sb.auth.signOut();
+        try { Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k)); } catch(_){}
+        hide('app-screen'); hide('pending-screen');
+        show('auth-screen');
+        return;
+      }
+      console.error('loadMe error:', r.error);
+    }
+    me = r.data;
+  } catch (e) {
+    // 401 от REST приходит exception'ом — тоже выкидываем на вход
+    console.warn('users fetch threw:', e);
+    await sb.auth.signOut();
+    try { Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k)); } catch(_){}
+    hide('app-screen'); hide('pending-screen');
+    show('auth-screen');
+    return;
+  }
+
+  // Профиль ещё не создался триггером — подождём
+  if (!me) {
+    await new Promise(r => setTimeout(r, 800));
+    const r2 = await sb.from('users').select('*').eq('id', session.user.id).maybeSingle();
+    me = r2.data;
+    if (!me) {
+      await sb.auth.signOut();
       hide('app-screen'); hide('pending-screen');
       show('auth-screen');
+      showAuthError('Не удалось получить профиль. Попробуйте войти заново.');
       return;
     }
-
-    const me = await loadMe();
-    if (!me) {
-      // профиль ещё не создался триггером — подождём
-      await new Promise(r => setTimeout(r, 600));
-      const me2 = await loadMe();
-      if (!me2) {
-        showAuthError('Не удалось получить профиль. Попробуйте перезайти.');
-        await sb.auth.signOut();
-        return route();
-      }
-      state.me = me2;
-    } else {
-      state.me = me;
-    }
-
-    if (state.me.status !== 'active') {
-      hide('auth-screen'); hide('app-screen');
-      show('pending-screen');
-      if (state.me.status === 'blocked') {
-        $('#pending-title').textContent = 'Учётная запись заблокирована';
-        $('#pending-text').textContent = 'Доступ к приложению закрыт администратором.';
-      } else {
-        $('#pending-title').textContent = 'Ожидает подтверждения';
-        $('#pending-text').textContent = 'Ваша учётная запись зарегистрирована. Доступ откроется после подтверждения администратором.';
-      }
-      return;
-    }
-
-    hide('auth-screen'); hide('pending-screen');
-    show('app-screen');
-    await bootApp();
   }
+  state.me = me;
+
+  if (state.me.status !== 'active') {
+    hide('auth-screen'); hide('app-screen');
+    show('pending-screen');
+    if (state.me.status === 'blocked') {
+      $('#pending-title').textContent = 'Учётная запись заблокирована';
+      $('#pending-text').textContent  = 'Доступ к приложению закрыт администратором.';
+    } else {
+      $('#pending-title').textContent = 'Ожидает подтверждения';
+      $('#pending-text').textContent  = 'Ваша учётная запись зарегистрирована. Доступ откроется после подтверждения администратором.';
+    }
+    return;
+  }
+
+  hide('auth-screen'); hide('pending-screen');
+  show('app-screen');
+  await bootApp();
+}
 
   async function loadMe(){
     const { data, error } = await sb.from('users').select('*').eq('id', state.session.user.id).maybeSingle();
