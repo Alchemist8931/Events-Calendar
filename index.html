@@ -771,23 +771,32 @@ async function routeInternal(){
     location.reload();
   });
 
-  sb.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange((event, session) => {
   console.log('[auth] event:', event, 'session?', !!session);
+  // ВАЖНО: внутри этого handler НЕЛЬЗЯ делать await sb.* —
+  // это deadlock в supabase-js v2. Только локальное состояние и setTimeout.
+  state.session = session;
 
-  // INITIAL_SESSION и TOKEN_REFRESHED — синхронные, init() их сам обработает
-  if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
-    state.session = session;
-    return;
-  }
-
-  if (event === 'SIGNED_IN' && session && !state.session) {
-    try { await sb.rpc('log_action', { p_action_type: 'auth.login', p_entity_type: 'auth', p_entity_id: session.user.id, p_details: { provider: session.user.app_metadata?.provider || 'google' } }); } catch(_){}
-  }
   if (event === 'SIGNED_OUT') {
     unsubscribeRealtime();
   }
-  state.session = session;
-  await route();
+
+  // Логируем вход в журнал отложенно, чтобы вырваться из стэка supabase-js.
+  // Используем флаг в sessionStorage, чтобы не писать на каждый refresh.
+  if (event === 'SIGNED_IN' && session) {
+    const flagKey = 'login_logged_' + session.user.id;
+    if (!sessionStorage.getItem(flagKey)) {
+      sessionStorage.setItem(flagKey, '1');
+      setTimeout(() => {
+        sb.rpc('log_action', {
+          p_action_type: 'auth.login',
+          p_entity_type: 'auth',
+          p_entity_id: session.user.id,
+          p_details: { provider: session.user.app_metadata?.provider || 'google' }
+        }).catch(() => {});
+      }, 500);
+    }
+  }
 });
 
   // ===== APP =====
