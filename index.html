@@ -448,8 +448,9 @@
         </div>
       </div>
       <div class="space-y-2">
-        <button id="btn-logout" class="btn-ghost w-full text-left">Выйти</button>
-      </div>
+  <button id="btn-push" class="btn-ghost w-full text-left">🔔 Уведомления: <span id="btn-push-state">проверка…</span></button>
+  <button id="btn-logout" class="btn-ghost w-full text-left">Выйти</button>
+</div>
     </div>
   </div>
 </div>
@@ -576,6 +577,159 @@
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
   window.sb = sb;
+
+  // ===== PUSH NOTIFICATIONS =====
+  const VAPID_PUBLIC_KEY = 'BEeqhD_DN0_AAJ6JbIrR8BLx7xHWcO9XHlQNAdg56vBJS4skid84mm6ppiE5RjsZz2PMD-hTNaAcuRAeJ3tHBdk';
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  function pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  }
+
+  async function getSWRegistration() {
+    if (!('serviceWorker' in navigator)) return null;
+    return await navigator.serviceWorker.getRegistration() || await navigator.serviceWorker.register('./sw.js');
+  }
+
+  async function getPushState() {
+    if (!pushSupported()) return 'unsupported';
+    if (Notification.permission === 'denied') return 'denied';
+    const reg = await getSWRegistration();
+    if (!reg) return 'unsupported';
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) return 'on';
+    return Notification.permission === 'granted' ? 'off' : 'prompt';
+  }
+
+  async function refreshPushButton() {
+    const btn  = $('#btn-push');
+    const lbl  = $('#btn-push-state');
+    if (!btn || !lbl) return;
+    const s = await getPushState();
+    const map = {
+      unsupported: { text: 'не поддерживается', disabled: true },
+      denied:      { text: 'заблокированы в браузере', disabled: true },
+      prompt:      { text: 'выкл — нажмите, чтобы включить', disabled: false },
+      off:         { text: 'выкл — нажмите, чтобы включить', disabled: false },
+      on:          { text: 'вкл — нажмите, чтобы выключить', disabled: false },
+    };
+    const m = map[s] || map.unsupported;
+    lbl.textContent = m.text;
+    btn.disabled = m.disabled;
+    btn.dataset.pushState = s;
+  }
+
+  async function subscribeToPush() {
+    if (!pushSupported()) {
+      toast('Браузер не поддерживает push-уведомления');
+      return false;
+    }
+    if (Notification.permission === 'denied') {
+      toast('Уведомления заблокированы в настройках браузера');
+      return false;
+    }
+    try {
+      let perm = Notification.permission;
+      if (perm !== 'granted') perm = await Notification.requestPermission();
+      if (perm !== 'granted') return false;
+
+      const reg = await getSWRegistration();
+      if (!reg) return false;
+
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+      }
+
+      const json = sub.toJSON();
+      const payload = {
+        user_id:    state.me.id,
+        endpoint:   sub.endpoint,
+        p256dh:     json.keys?.p256dh,
+        auth:       json.keys?.auth,
+        user_agent: navigator.userAgent,
+      };
+
+      // upsert по уникальному endpoint
+      const { error } = await sb.from('push_subscriptions')
+        .upsert(payload, { onConflict: 'endpoint' });
+      if (error) { console.warn('save subscription failed', error); toast('Не удалось сохранить подписку'); return false; }
+
+      toast('Уведомления включены');
+      return true;
+    } catch (e) {
+      console.warn('subscribeToPush failed', e);
+      toast('Не удалось включить уведомления');
+      return false;
+    }
+  }
+
+  async function unsubscribeFromPush() {
+    try {
+      const reg = await getSWRegistration();
+      const sub = reg && await reg.pushManager.getSubscription();
+      if (sub) {
+        const endpoint = sub.endpoint;
+        await sub.unsubscribe();
+        await sb.from('push_subscriptions').delete().eq('endpoint', endpoint);
+      }
+      toast('Уведомления выключены');
+      return true;
+    } catch (e) {
+      console.warn('unsubscribeFromPush failed', e);
+      return false;
+    }
+  }
+
+  // Авто-синхронизация: если в браузере подписка есть, но в БД нет (или наоборот) — поправить
+  async function syncPushSubscription() {
+    if (!pushSupported() || !state.me) return;
+    try {
+      const reg = await getSWRegistration();
+      if (!reg) return;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub) return; // нечего синхронизировать
+      const json = sub.toJSON();
+      await sb.from('push_subscriptions').upsert({
+        user_id:    state.me.id,
+        endpoint:   sub.endpoint,
+        p256dh:     json.keys?.p256dh,
+        auth:       json.keys?.auth,
+        user_agent: navigator.userAgent,
+      }, { onConflict: 'endpoint' });
+    } catch(_) {}
+  }
+
+  // Клик по кнопке — toggle
+  document.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('#btn-push');
+    if (!btn || btn.disabled) return;
+    const s = btn.dataset.pushState;
+    if (s === 'on') await unsubscribeFromPush();
+    else            await subscribeToPush();
+    await refreshPushButton();
+  });
+
+  // Если SW сообщает о смене подписки — переподписать
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', async (e) => {
+      if (e.data?.type === 'pushsubscriptionchange' && state.me) {
+        await subscribeToPush();
+        await refreshPushButton();
+      }
+    });
+  }
 
   // ===== STATE =====
   const state = {
@@ -762,6 +916,10 @@
     renderAllCalendarPages();
     renderEventsList();
     setupRealtime();
+
+    // ↓ ДОБАВИТЬ ЭТИ ДВЕ СТРОКИ
+    syncPushSubscription();
+    refreshPushButton();
   }
 
   function renderMe(){
@@ -1293,7 +1451,14 @@
   }
 
   // ===== INIT =====
-  (async function init(){ checkDesktop(); await route(); })();
+  (async function init(){
+    checkDesktop();
+    // Регистрируем SW как можно раньше
+    if ('serviceWorker' in navigator) {
+      try { await navigator.serviceWorker.register('./sw.js'); } catch(e){ console.warn('SW reg failed', e); }
+    }
+    await route();
+  })();
 </script>
 </body>
 </html>
