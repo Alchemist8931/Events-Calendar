@@ -589,6 +589,7 @@
     openedEventId: null,
     editingEventId: null,
     realtimeChannels: [],
+    routing: false,
   };
 
   // ===== UTILS =====
@@ -666,6 +667,23 @@
 
   // ===== ROUTE =====
   async function route(){
+  if (state.routing) { console.log('[route] уже выполняется, пропуск'); return; }
+  state.routing = true;
+  console.log('[route] старт');
+  try {
+    await routeInternal();
+  } catch (e) {
+    console.error('[route] фатальная ошибка:', e);
+    hide('app-screen'); hide('pending-screen');
+    show('auth-screen');
+    showAuthError('Ошибка инициализации: ' + (e.message || e));
+  } finally {
+    state.routing = false;
+    console.log('[route] конец');
+  }
+}
+
+async function routeInternal(){
   let session = null;
   try {
     const res = await sb.auth.getSession();
@@ -754,15 +772,23 @@
   });
 
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session && !state.session) {
-      await sb.rpc('log_action', { p_action_type: 'auth.login', p_entity_type: 'auth', p_entity_id: session.user.id, p_details: { provider: session.user.app_metadata?.provider || 'google' } });
-    }
-    if (event === 'SIGNED_OUT') {
-      unsubscribeRealtime();
-    }
+  console.log('[auth] event:', event, 'session?', !!session);
+
+  // INITIAL_SESSION и TOKEN_REFRESHED — синхронные, init() их сам обработает
+  if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
     state.session = session;
-    await route();
-  });
+    return;
+  }
+
+  if (event === 'SIGNED_IN' && session && !state.session) {
+    try { await sb.rpc('log_action', { p_action_type: 'auth.login', p_entity_type: 'auth', p_entity_id: session.user.id, p_details: { provider: session.user.app_metadata?.provider || 'google' } }); } catch(_){}
+  }
+  if (event === 'SIGNED_OUT') {
+    unsubscribeRealtime();
+  }
+  state.session = session;
+  await route();
+});
 
   // ===== APP =====
   async function bootApp(){
