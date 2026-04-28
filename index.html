@@ -576,6 +576,8 @@
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
 
+  window.sb = sb; // временно для отладки
+
   // ===== STATE =====
   const state = {
     session: null,
