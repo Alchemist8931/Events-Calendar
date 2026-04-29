@@ -973,10 +973,27 @@
     }
   });
 
+  function maybeShowPWAHint() {
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua);
+    const standalone = window.navigator.standalone === true ||
+                       window.matchMedia('(display-mode: standalone)').matches;
+    if (isIOS && !standalone && !sessionStorage.getItem('pwa_hint_shown')) {
+      sessionStorage.setItem('pwa_hint_shown', '1');
+      toast('Чтобы получать уведомления, добавьте приложение на главный экран: Поделиться → На экран «Домой»');
+    }
+  }
+
   // ===== APP =====
   async function bootApp(){
     renderMe();
     $('#btn-admin').classList.toggle('hidden', state.me.role !== 'admin');
+
+    // ↓ ДОБАВИТЬ
+    const debugVisible = state.me.role === 'admin';
+    ['#btn-push-test-local', '#btn-push-test-server', '#btn-push-reset', '#push-debug']
+      .forEach(sel => { const el = $(sel); if (el) el.classList.toggle('hidden', !debugVisible); });
+    
     await loadActiveUsers();
 
     state.selectedDate = new Date();
@@ -987,6 +1004,7 @@
     renderAllCalendarPages();
     renderEventsList();
     setupRealtime();
+    maybeShowPWAHint();
 
     // ↓ ДОБАВИТЬ ЭТИ ДВЕ СТРОКИ
     syncPushSubscription();
