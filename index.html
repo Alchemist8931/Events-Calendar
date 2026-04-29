@@ -447,8 +447,12 @@
           <div id="menu-email" class="text-xs truncate" style="color: var(--fg-muted);">—</div>
         </div>
       </div>
-      <div class="space-y-2">
+<div class="space-y-2">
   <button id="btn-push" class="btn-ghost w-full text-left">🔔 Уведомления: <span id="btn-push-state">проверка…</span></button>
+  <button id="btn-push-test-local" class="btn-ghost w-full text-left">🧪 Тест 1: локально через SW</button>
+  <button id="btn-push-test-server" class="btn-ghost w-full text-left">🧪 Тест 2: с сервера через Apple</button>
+  <button id="btn-push-reset" class="btn-ghost w-full text-left">♻️ Пересоздать подписку</button>
+  <pre id="push-debug" class="text-[11px] p-2 rounded" style="background:rgba(0,0,0,0.04); white-space:pre-wrap; max-height:200px; overflow-y:auto;"></pre>
   <button id="btn-logout" class="btn-ghost w-full text-left">Выйти</button>
 </div>
     </div>
@@ -578,40 +582,47 @@
   });
   window.sb = sb;
 
-  // ===== PUSH NOTIFICATIONS =====
+ // ===== PUSH NOTIFICATIONS (diagnostic build) =====
   const VAPID_PUBLIC_KEY = 'BEeqhD_DN0_AAJ6JbIrR8BLx7xHWcO9XHlQNAdg56vBJS4skid84mm6ppiE5RjsZz2PMD-hTNaAcuRAeJ3tHBdk';
 
-  function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const raw = atob(base64);
-    const out = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  function urlBase64ToUint8Array(b64) {
+    const pad = '='.repeat((4 - b64.length % 4) % 4);
+    const s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(s); const out = new Uint8Array(raw.length);
+    for (let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
     return out;
   }
 
-  function pushSupported() {
-    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+
+  function dbg(...args){
+    const el = $('#push-debug'); if(!el) return;
+    const ts = new Date().toLocaleTimeString('ru-RU');
+    const line = '[' + ts + '] ' + args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
+    el.textContent = (el.textContent ? el.textContent + '\n' : '') + line;
+    el.scrollTop = el.scrollHeight;
+    console.log('[push]', ...args);
   }
 
-  async function getSWRegistration() {
+  async function getReg() {
     if (!('serviceWorker' in navigator)) return null;
-    return await navigator.serviceWorker.getRegistration() || await navigator.serviceWorker.register('./sw.js');
+    let reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) reg = await navigator.serviceWorker.register('./sw.js');
+    await navigator.serviceWorker.ready;
+    return reg;
   }
 
   async function getPushState() {
     if (!pushSupported()) return 'unsupported';
     if (Notification.permission === 'denied') return 'denied';
-    const reg = await getSWRegistration();
-    if (!reg) return 'unsupported';
+    const reg = await getReg(); if (!reg) return 'unsupported';
     const sub = await reg.pushManager.getSubscription();
     if (sub) return 'on';
     return Notification.permission === 'granted' ? 'off' : 'prompt';
   }
 
   async function refreshPushButton() {
-    const btn  = $('#btn-push');
-    const lbl  = $('#btn-push-state');
+    const btn = $('#btn-push'), lbl = $('#btn-push-state');
     if (!btn || !lbl) return;
     const s = await getPushState();
     const map = {
@@ -628,22 +639,13 @@
   }
 
   async function subscribeToPush() {
-    if (!pushSupported()) {
-      toast('Браузер не поддерживает push-уведомления');
-      return false;
-    }
-    if (Notification.permission === 'denied') {
-      toast('Уведомления заблокированы в настройках браузера');
-      return false;
-    }
+    if (!pushSupported()) { toast('Браузер не поддерживает push'); return false; }
+    if (Notification.permission === 'denied') { toast('Уведомления заблокированы в браузере'); return false; }
     try {
       let perm = Notification.permission;
       if (perm !== 'granted') perm = await Notification.requestPermission();
       if (perm !== 'granted') return false;
-
-      const reg = await getSWRegistration();
-      if (!reg) return false;
-
+      const reg = await getReg(); if (!reg) return false;
       let sub = await reg.pushManager.getSubscription();
       if (!sub) {
         sub = await reg.pushManager.subscribe({
@@ -651,83 +653,152 @@
           applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
         });
       }
-
       const json = sub.toJSON();
-      const payload = {
-        user_id:    state.me.id,
-        endpoint:   sub.endpoint,
-        p256dh:     json.keys?.p256dh,
-        auth:       json.keys?.auth,
-        user_agent: navigator.userAgent,
-      };
-
-      // upsert по уникальному endpoint
-      const { error } = await sb.from('push_subscriptions')
-        .upsert(payload, { onConflict: 'endpoint' });
-      if (error) { console.warn('save subscription failed', error); toast('Не удалось сохранить подписку'); return false; }
-
+      const { error } = await sb.from('push_subscriptions').upsert({
+        user_id: state.me.id, endpoint: sub.endpoint,
+        p256dh: json.keys?.p256dh, auth: json.keys?.auth, user_agent: navigator.userAgent,
+      }, { onConflict: 'endpoint' });
+      if (error) { dbg('save sub failed', error.message); toast('Не удалось сохранить подписку'); return false; }
+      dbg('subscribed', sub.endpoint.slice(0, 60) + '…');
       toast('Уведомления включены');
       return true;
-    } catch (e) {
-      console.warn('subscribeToPush failed', e);
-      toast('Не удалось включить уведомления');
-      return false;
-    }
+    } catch (e) { dbg('subscribe failed', String(e)); toast('Не удалось включить'); return false; }
   }
 
   async function unsubscribeFromPush() {
     try {
-      const reg = await getSWRegistration();
+      const reg = await getReg();
       const sub = reg && await reg.pushManager.getSubscription();
       if (sub) {
-        const endpoint = sub.endpoint;
+        const ep = sub.endpoint;
         await sub.unsubscribe();
-        await sb.from('push_subscriptions').delete().eq('endpoint', endpoint);
+        await sb.from('push_subscriptions').delete().eq('endpoint', ep);
+        dbg('unsubscribed', ep.slice(0,60)+'…');
       }
       toast('Уведомления выключены');
       return true;
-    } catch (e) {
-      console.warn('unsubscribeFromPush failed', e);
-      return false;
-    }
+    } catch (e) { dbg('unsubscribe failed', String(e)); return false; }
   }
 
-  // Авто-синхронизация: если в браузере подписка есть, но в БД нет (или наоборот) — поправить
   async function syncPushSubscription() {
     if (!pushSupported() || !state.me) return;
     try {
-      const reg = await getSWRegistration();
-      if (!reg) return;
+      const reg = await getReg(); if (!reg) return;
       const sub = await reg.pushManager.getSubscription();
-      if (!sub) return; // нечего синхронизировать
+      if (!sub) return;
       const json = sub.toJSON();
       await sb.from('push_subscriptions').upsert({
-        user_id:    state.me.id,
-        endpoint:   sub.endpoint,
-        p256dh:     json.keys?.p256dh,
-        auth:       json.keys?.auth,
-        user_agent: navigator.userAgent,
+        user_id: state.me.id, endpoint: sub.endpoint,
+        p256dh: json.keys?.p256dh, auth: json.keys?.auth, user_agent: navigator.userAgent,
       }, { onConflict: 'endpoint' });
     } catch(_) {}
   }
 
-  // Клик по кнопке — toggle
+  // ===== ТЕСТ 1: локально через SW (изолируем permission/SW) =====
+  async function testLocalNotification() {
+    if (!pushSupported()) { dbg('Браузер не поддерживает push'); return; }
+    if (Notification.permission !== 'granted') {
+      dbg('Permission =', Notification.permission, '— разрешите уведомления');
+      return;
+    }
+    const reg = await getReg(); if (!reg) { dbg('SW не зарегистрирован'); return; }
+    const ctrl = navigator.serviceWorker.controller;
+    if (!ctrl) {
+      dbg('Нет controller. Перезагрузите страницу (Cmd+R) и нажмите снова.');
+      return;
+    }
+    dbg('Прошу SW показать локальную нотификацию…');
+    // одноразовый канал ответа
+    const ch = new MessageChannel();
+    ch.port1.onmessage = (ev) => {
+      const r = ev.data || {};
+      if (r.type === 'show_test_notification_result') {
+        if (r.ok) dbg('✅ ТЕСТ 1 успех. SW версия:', r.version, '— значит permission и SW в порядке.');
+        else dbg('❌ ТЕСТ 1 провалился:', r.error, 'SW версия:', r.version);
+      }
+    };
+    ctrl.postMessage({ type: 'show_test_notification' }, [ch.port2]);
+  }
+
+  // ===== ТЕСТ 2: с сервера через Apple/Google Push =====
+  async function testServerPush() {
+    dbg('Прошу сервер прислать тестовый push…');
+    const url = '${SUPABASE_URL_PLACEHOLDER}/functions/v1/push-test'.replace(
+      '${SUPABASE_URL_PLACEHOLDER}', SUPABASE_URL
+    );
+    try {
+      const sess = (await sb.auth.getSession()).data?.session;
+      if (!sess) { dbg('Нет сессии'); return; }
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + sess.access_token,
+          'apikey':        SUPABASE_ANON,
+          'Content-Type':  'application/json',
+        },
+        body: '{}',
+      });
+      const data = await res.json();
+      dbg('Сервер ответил:', data);
+      if (data.sent > 0) {
+        dbg('Push отправлен в', data.sent, 'устройств. Если на телефоне нотификация не появляется — проблема на устройстве.');
+      } else if (data.failed > 0) {
+        dbg('Ошибка отправки. Смотрите details выше.');
+      } else if (data.total === 0) {
+        dbg('У вас нет подписок. Сначала включите уведомления.');
+      }
+    } catch (e) { dbg('fetch failed:', String(e)); }
+  }
+
+  async function hardResetSubscription() {
+    dbg('Сброс подписки…');
+    try {
+      const reg = await getReg();
+      const sub = reg && await reg.pushManager.getSubscription();
+      if (sub) {
+        const ep = sub.endpoint;
+        try { await sub.unsubscribe(); } catch(_){}
+        await sb.from('push_subscriptions').delete().eq('endpoint', ep);
+        dbg('старая подписка удалена');
+      }
+      // Снимаем все регистрации SW
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) await r.unregister();
+      dbg('SW unregistered, регистрирую заново…');
+      // Чистим caches
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      // Регаем заново и ждём активации
+      const newReg = await navigator.serviceWorker.register('./sw.js');
+      await navigator.serviceWorker.ready;
+      // Дадим SW момент перехватить страницу
+      await new Promise(r => setTimeout(r, 600));
+      const ok = await subscribeToPush();
+      if (ok) dbg('✅ Новая подписка создана. Перезагрузите страницу (Cmd+R) и попробуйте Тест 2.');
+      else dbg('❌ Не удалось создать подписку');
+    } catch (e) { dbg('hardReset failed:', String(e)); }
+    refreshPushButton();
+  }
+
+  // ===== Обработчики =====
   document.addEventListener('click', async (ev) => {
-    const btn = ev.target.closest('#btn-push');
-    if (!btn || btn.disabled) return;
-    const s = btn.dataset.pushState;
-    if (s === 'on') await unsubscribeFromPush();
-    else            await subscribeToPush();
-    await refreshPushButton();
+    if (ev.target.closest('#btn-push') && !ev.target.closest('#btn-push').disabled) {
+      const s = ev.target.closest('#btn-push').dataset.pushState;
+      if (s === 'on') await unsubscribeFromPush();
+      else            await subscribeToPush();
+      await refreshPushButton(); return;
+    }
+    if (ev.target.closest('#btn-push-test-local'))  { await testLocalNotification(); return; }
+    if (ev.target.closest('#btn-push-test-server')) { await testServerPush();        return; }
+    if (ev.target.closest('#btn-push-reset'))       { await hardResetSubscription(); return; }
   });
 
-  // Если SW сообщает о смене подписки — переподписать
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', async (e) => {
-      if (e.data?.type === 'pushsubscriptionchange' && state.me) {
-        await subscribeToPush();
-        await refreshPushButton();
-      }
+      const t = e.data && e.data.type;
+      if (t === 'sw_version') dbg('SW активен:', e.data.version);
+      if (t === 'push_log')   dbg('SW push handler:', e.data.ok ? '✅' : '❌', 'title=', e.data.title, e.data.error || '');
+      if (t === 'pushsubscriptionchange' && state.me) { await subscribeToPush(); await refreshPushButton(); }
     });
   }
 
@@ -1453,9 +1524,15 @@
   // ===== INIT =====
   (async function init(){
     checkDesktop();
-    // Регистрируем SW как можно раньше
     if ('serviceWorker' in navigator) {
-      try { await navigator.serviceWorker.register('./sw.js'); } catch(e){ console.warn('SW reg failed', e); }
+      try {
+        const reg = await navigator.serviceWorker.register('./sw.js');
+        await navigator.serviceWorker.ready;
+        // Запросим у активного SW его версию
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'get_version' });
+        }
+      } catch(e) { console.warn('SW reg failed', e); }
     }
     await route();
   })();
