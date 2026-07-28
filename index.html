@@ -9,342 +9,198 @@
 <meta name="apple-mobile-web-app-title" content="Events" />
 <meta name="mobile-web-app-capable" content="yes" />
 <title>Events Calendar</title>
-
-<!-- Tailwind -->
+<link rel="manifest" href="manifest.json" />
 <script src="https://cdn.tailwindcss.com/3.4.4"></script>
-
-<!-- Шрифт -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=SN+Pro:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <style>
-  :root {
-    --bg: #FFFFFF;
-    --bg-secondary: #FAFAFA;
-    --bg-tertiary: #F5F5F5;
-    --fg: #0A0A0A;
-    --fg-secondary: #404040;
-    --fg-muted: #737373;
-    --border: #E5E5E5;
-    --border-light: #F0F0F0;
-    --card: #FFFFFF;
-
-    --success: #16A34A;
-    --warning: #D97706;
-    --error:   #DC2626;
-    --info:    #2563EB;
-
-    --radius-btn: 12px;   /* единый радиус для шапки/щита/стрелок/аватара */
-
-    --safe-top: env(safe-area-inset-top);
-    --safe-bottom: env(safe-area-inset-bottom);
+  :root{
+    --bg:#FFFFFF; --bg-secondary:#FAFAFA; --bg-tertiary:#F5F5F5;
+    --fg:#0A0A0A; --fg-secondary:#404040; --fg-muted:#737373;
+    --border:#E5E5E5; --border-light:#F0F0F0; --card:#FFFFFF;
+    --success:#16A34A; --warning:#D97706; --error:#DC2626; --info:#2563EB;
+    --safe-top:env(safe-area-inset-top); --safe-bottom:env(safe-area-inset-bottom);
   }
+  *{-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--bg);color:var(--fg);
+    font-family:'SN Pro','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font-weight:400;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none;}
+  h1,h2,h3,h4{font-weight:600;letter-spacing:-0.01em;}
 
-  * { -webkit-tap-highlight-color: transparent; }
+  .bp-grid{background-image:linear-gradient(to right,rgba(10,10,10,.04) 1px,transparent 1px),
+    linear-gradient(to bottom,rgba(10,10,10,.04) 1px,transparent 1px);background-size:24px 24px;}
+  .corner-card{position:relative;}
+  .corner-card::before,.corner-card::after,.corner-card>.cm-tl,.corner-card>.cm-tr{
+    content:'';position:absolute;width:10px;height:10px;border-color:var(--fg);
+    border-style:solid;pointer-events:none;}
+  .corner-card::before{top:-1px;left:-1px;border-width:1px 0 0 1px;}
+  .corner-card::after{bottom:-1px;right:-1px;border-width:0 1px 1px 0;}
+  .corner-card>.cm-tr{top:-1px;right:-1px;border-width:1px 1px 0 0;}
+  .corner-card>.cm-tl{bottom:-1px;left:-1px;border-width:0 0 1px 1px;}
 
-  html, body {
-    background: var(--bg);
-    color: var(--fg);
-    font-family: 'SN Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-weight: 400;
-    -webkit-font-smoothing: antialiased;
-    overscroll-behavior-y: none;
-  }
+  @keyframes reveal{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .reveal{animation:reveal .35s ease-out both;}
+  @keyframes scan{0%{transform:translateY(-100%);}100%{transform:translateY(2000%);}}
+  .scan-line{position:absolute;left:0;right:0;top:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(10,10,10,.4),transparent);
+    animation:scan 5s linear infinite;}
 
-  h1, h2, h3, h4 { font-weight: 600; letter-spacing: -0.01em; }
+  .btn-primary{background:var(--fg);color:#fff;border-radius:12px;padding:12px 18px;
+    font-weight:500;transition:transform .1s,background .15s;}
+  .btn-primary:hover{background:#1A1A1A;}
+  .btn-primary:active{transform:scale(.98);}
+  .btn-primary:disabled{opacity:.5;pointer-events:none;}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--fg);
+    border-radius:12px;padding:12px 18px;font-weight:500;}
+  .btn-ghost:hover{background:var(--bg-secondary);}
 
-  /* Blueprint-grid фон для экранов авторизации */
-  .bp-grid {
-    background-image:
-      linear-gradient(to right, rgba(10,10,10,0.04) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(10,10,10,0.04) 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
+  .field{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:12px;
+    padding:12px 14px;color:var(--fg);font-size:16px;outline:none;transition:border-color .15s;}
+  .field:focus{border-color:var(--fg);}
+  .field::placeholder{color:var(--fg-muted);}
+  textarea.field{min-height:70px;resize:vertical;}
 
-  /* Corner-marks */
-  .corner-card { position: relative; }
-  .corner-card::before,
-  .corner-card::after,
-  .corner-card > .cm-tl,
-  .corner-card > .cm-tr {
-    content: '';
-    position: absolute;
-    width: 10px; height: 10px;
-    border-color: var(--fg);
-    border-style: solid;
-    pointer-events: none;
-  }
-  .corner-card::before { top:-1px;  left:-1px;  border-width: 1px 0 0 1px; }
-  .corner-card::after  { bottom:-1px; right:-1px; border-width: 0 1px 1px 0; }
-  .corner-card > .cm-tr { top:-1px;  right:-1px; border-width: 1px 1px 0 0; }
-  .corner-card > .cm-tl { bottom:-1px; left:-1px;  border-width: 0 0 1px 1px; }
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;
+    font-size:11px;font-weight:500;line-height:1.4;}
+  .badge-success{background:rgba(22,163,74,.1);color:var(--success);}
+  .badge-warning{background:rgba(217,119,6,.1);color:var(--warning);}
+  .badge-error{background:rgba(220,38,38,.1);color:var(--error);}
+  .badge-info{background:rgba(37,99,235,.1);color:var(--info);}
+  .badge-muted{background:var(--bg-tertiary);color:var(--fg-muted);}
 
-  @keyframes reveal { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-  .reveal { animation: reveal .35s ease-out both; }
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+  .cal-cell{aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;
+    justify-content:flex-start;gap:2px;padding:6px 0 4px;background:var(--bg);
+    border:1px solid transparent;border-radius:10px;cursor:pointer;user-select:none;
+    transition:background .15s,border-color .15s;position:relative;}
+  .cal-cell:hover{background:var(--bg-secondary);}
+  .cal-cell.is-other-month{color:var(--fg-muted);opacity:.45;}
+  .cal-cell.is-today{border-color:var(--fg);font-weight:600;}
+  .cal-cell.is-selected{background:var(--fg);color:#fff;}
+  .cell-dot{width:5px;height:5px;border-radius:9999px;}
+  .cell-dots{display:flex;gap:3px;margin-top:2px;}
 
-  @keyframes scan { 0% { transform: translateY(-100%); } 100% { transform: translateY(2000%); } }
-  .scan-line {
-    position: absolute; left: 0; right: 0; top: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(10,10,10,0.4), transparent);
-    animation: scan 5s linear infinite;
-  }
+  .event-card{border:1px solid var(--border);border-radius:14px;background:var(--card);
+    padding:12px 14px;transition:border-color .15s;}
+  .event-card:hover{border-color:var(--fg);}
+  .event-stripe{width:3px;border-radius:2px;align-self:stretch;}
 
-  .btn-primary {
-    background: var(--fg); color: #fff;
-    border-radius: 12px; padding: 12px 18px;
-    font-weight: 500;
-    transition: transform .1s ease, background .15s ease;
-  }
-  .btn-primary:hover { background: #1A1A1A; }
-  .btn-primary:active { transform: scale(0.98); }
-  .btn-primary:disabled { opacity: .5; pointer-events: none; }
+  .check{appearance:none;-webkit-appearance:none;width:20px;height:20px;
+    border:1.5px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;
+    display:grid;place-items:center;flex-shrink:0;transition:background .15s,border-color .15s;}
+  .check:checked{background:var(--fg);border-color:var(--fg);}
+  .check:checked::after{content:'';width:10px;height:6px;border-left:2px solid #fff;
+    border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px);}
 
-  .btn-ghost {
-    background: transparent; border: 1px solid var(--border); color: var(--fg);
-    border-radius: 12px; padding: 12px 18px; font-weight: 500;
-  }
-  .btn-ghost:hover { background: var(--bg-secondary); }
+  .modal-backdrop{position:fixed;inset:0;background:rgba(10,10,10,.35);
+    backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:50;}
+  .modal-sheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg);
+    border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;
+    padding-bottom:calc(16px + var(--safe-bottom));z-index:51;animation:sheet-up .25s ease-out;}
+  @keyframes sheet-up{from{transform:translateY(100%);}to{transform:translateY(0);}}
+  .sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 0;}
 
-  .field {
-    width: 100%;
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 12px; padding: 12px 14px;
-    color: var(--fg); font-size: 16px; outline: none;
-    transition: border-color .15s ease;
-  }
-  .field:focus { border-color: var(--fg); }
-  .field::placeholder { color: var(--fg-muted); }
+  .toast{background:var(--fg);color:#fff;border-radius:12px;padding:10px 14px;font-size:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.15);animation:reveal .2s ease-out both;max-width:100%;}
 
-  .badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 2px 8px; border-radius: 9999px;
-    font-size: 11px; font-weight: 500; line-height: 1.4;
-  }
-  .badge-success { background: rgba(22,163,74,.1);  color: var(--success); }
-  .badge-warning { background: rgba(217,119,6,.1);  color: var(--warning); }
-  .badge-error   { background: rgba(220,38,38,.1);  color: var(--error);   }
-  .badge-info    { background: rgba(37,99,235,.1);  color: var(--info);    }
-  .badge-muted   { background: var(--bg-tertiary);  color: var(--fg-muted); }
+  .app-frame{width:100%;max-width:520px;margin:0 auto;min-height:100vh;
+    background:var(--bg);position:relative;}
+  .avatar-fallback{display:inline-flex;align-items:center;justify-content:center;
+    background:var(--fg);color:#fff;font-weight:500;font-size:12px;border-radius:9999px;}
 
-  /* ==========================
-     ШАПКА (липкая, blur+градиент)
-     ========================== */
-  .app-header {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    padding-top: calc(12px + var(--safe-top));
-    padding-bottom: 14px;
-    /* блюр-градиент: чем ближе к низу, тем прозрачнее */
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
-    backdrop-filter: blur(14px) saturate(140%);
-    background: linear-gradient(to bottom,
-      rgba(255,255,255,0.92) 0%,
-      rgba(255,255,255,0.80) 60%,
-      rgba(255,255,255,0.55) 100%);
-    /* мягкая «подушка» под заголовком, маскирует переход */
-    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 78%, transparent 100%);
-            mask-image: linear-gradient(to bottom, black 0%, black 78%, transparent 100%);
-  }
-  /* WebKit без mask-image — fallback с тенью */
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    .app-header { background: var(--bg); }
-  }
+  .toggle{position:relative;width:44px;height:26px;flex-shrink:0;}
+  .toggle input{opacity:0;width:0;height:0;position:absolute;}
+  .toggle .slider{position:absolute;inset:0;background:var(--border);border-radius:9999px;
+    transition:background .2s;cursor:pointer;}
+  .toggle .slider::before{content:'';position:absolute;width:22px;height:22px;left:2px;top:2px;
+    background:#fff;border-radius:9999px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  .toggle input:checked + .slider{background:var(--success);}
+  .toggle input:checked + .slider::before{transform:translateX(18px);}
 
-  .header-title {
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    font-size: 28px;          /* совпадает по высоте с круглой иконкой пользователя 28px */
-    line-height: 1;
-    color: var(--fg);
-  }
+  .attach-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--border);}
+  .stat-tile{border:1px solid var(--border);border-radius:12px;padding:10px 12px;}
 
-  /* Унифицированный «pill»-контрол шапки и стрелок */
-  .pill-btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-btn);
-    background: var(--bg);
-    transition: background .15s ease, border-color .15s ease;
-  }
-  .pill-btn:hover { background: var(--bg-secondary); }
-  .pill-btn-sq { width: 36px; height: 36px; padding: 0; }
-  .pill-btn-user {
-    height: 36px;
-    padding: 4px 10px 4px 4px;
-    gap: 8px;
-  }
-  .pill-btn-user .avatar-fallback {
-    width: 28px; height: 28px;
-    border-radius: 8px; /* совпадает с радиусом контейнера-1 уровня */
-  }
-
-  /* ==========================
-     КАЛЕНДАРЬ + СВАЙП
-     ========================== */
-  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-  .cal-cell {
-    aspect-ratio: 1 / 1;
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-    gap: 2px; padding: 6px 0 4px;
-    background: var(--bg);
-    border: 1px solid transparent;
-    border-radius: 10px;
-    cursor: pointer; user-select: none;
-    transition: background .15s ease, border-color .15s ease;
-    position: relative;
-  }
-  .cal-cell:hover { background: var(--bg-secondary); }
-  .cal-cell.is-other-month { color: var(--fg-muted); opacity: .45; }
-  .cal-cell.is-today    { border-color: var(--fg); font-weight: 600; }
-  .cal-cell.is-selected { background: var(--fg); color: #fff; }
-  .cal-cell.is-selected .cell-dot { background: #fff; }
-  .cell-dot { width: 4px; height: 4px; border-radius: 9999px; background: var(--fg); }
-  .cell-dots { display: flex; gap: 3px; margin-top: 2px; }
-
-  /* Свайп-обёртка */
-  .cal-viewport { overflow: hidden; touch-action: pan-y; }
-  .cal-track {
-    display: flex;
-    width: 100%;
-    will-change: transform;
-    transition: transform .35s cubic-bezier(.22,.61,.36,1);
-  }
-  .cal-page { flex: 0 0 100%; min-width: 100%; }
-
-  /* ==========================
-     СПИСОК СОБЫТИЙ
-     ========================== */
-  .event-card {
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: var(--card);
-    padding: 12px 14px;
-    transition: border-color .15s ease, transform .1s ease, opacity .15s ease;
-  }
-  .event-card:hover { border-color: var(--fg); }
-  .event-card.is-past { opacity: .55; }
-  .event-card.is-past .event-stripe { opacity: .35; }
-
-  /* Чекбокс */
-  .check {
-    appearance: none; -webkit-appearance: none;
-    width: 20px; height: 20px; border: 1.5px solid var(--border);
-    border-radius: 6px; background: var(--bg); cursor: pointer;
-    display: grid; place-items: center; flex-shrink: 0;
-    transition: background .15s, border-color .15s;
-  }
-  .check:checked { background: var(--fg); border-color: var(--fg); }
-  .check:checked::after {
-    content: ''; width: 10px; height: 6px;
-    border-left: 2px solid #fff; border-bottom: 2px solid #fff;
-    transform: rotate(-45deg) translate(1px,-1px);
-  }
-
-  /* Модалка */
-  .modal-backdrop {
-    position: fixed; inset: 0; background: rgba(10,10,10,0.35);
-    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-    z-index: 50;
-  }
-  .modal-sheet {
-    position: fixed; left: 0; right: 0; bottom: 0;
-    background: var(--bg); border-radius: 20px 20px 0 0;
-    max-height: 92vh; overflow-y: auto;
-    padding-bottom: calc(16px + var(--safe-bottom));
-    z-index: 51;
-    animation: sheet-up .25s ease-out;
-  }
-  @keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
-  .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin: 8px auto 0; }
-
-  .toast {
-    background: var(--fg); color: #fff;
-    border-radius: 12px; padding: 10px 14px;
-    font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    animation: reveal .2s ease-out both;
-  }
-
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { scrollbar-width: none; }
-
-  .app-frame {
-    width: 100%;
-    max-width: 520px;
-    margin: 0 auto;
-    min-height: 100vh;
-    background: var(--bg);
-    position: relative;
-  }
-
-  .avatar-fallback {
-    display: inline-flex; align-items: center; justify-content: center;
-    background: var(--fg); color: #fff;
-    font-weight: 500; font-size: 12px;
-    border-radius: 9999px;
-  }
-  .avatar-fallback.is-square { border-radius: 8px; }
-
-  .event-stripe {
-    width: 3px; border-radius: 2px; align-self: stretch;
-    background: var(--fg); opacity: .85;
-  }
+  /* Селектор команды */
+  .team-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+    border-radius:9999px;border:1px solid var(--border);font-size:13px;font-weight:500;
+    white-space:nowrap;cursor:pointer;transition:border-color .15s,background .15s;}
+  .team-chip.is-active{background:var(--fg);color:#fff;border-color:var(--fg);}
+  .team-dot{width:8px;height:8px;border-radius:9999px;flex-shrink:0;}
+  .team-scroll{display:flex;gap:6px;overflow-x:auto;padding:0 16px 8px;}
+  .team-scroll::-webkit-scrollbar{display:none;}
+  .team-scroll{scrollbar-width:none;}
 </style>
 </head>
 <body>
 
-<!-- БАННЕР ДЕСКТОПА -->
-<div id="desktop-banner" class="hidden fixed inset-0 z-[90] items-center justify-center p-6" style="background: rgba(10,10,10,0.45); backdrop-filter: blur(6px);">
+<!-- ============ ДЕСКТОПНЫЙ БАННЕР ============ -->
+<div id="desktop-banner" class="hidden fixed inset-0 z-[90] items-center justify-center p-6"
+     style="background:rgba(10,10,10,.45);backdrop-filter:blur(6px);">
   <div class="corner-card bg-white rounded-2xl p-6 max-w-md w-full relative" style="border:1px solid var(--border);">
     <span class="cm-tr"></span><span class="cm-tl"></span>
-    <div class="text-xs uppercase tracking-widest" style="color: var(--fg-muted);">Внимание</div>
+    <div class="text-xs uppercase tracking-widest" style="color:var(--fg-muted);">Внимание</div>
     <h2 class="mt-2 text-xl">Приложение оптимизировано для мобильных устройств</h2>
-    <p class="mt-3 text-sm" style="color: var(--fg-secondary);">
-      Events Calendar — PWA для смартфонов и планшетов. На рабочем столе интерфейс отображается в компактной мобильной рамке. Для лучшего опыта откройте ссылку на телефоне или установите приложение через меню браузера.
+    <p class="mt-3 text-sm" style="color:var(--fg-secondary);">
+      Events Calendar — PWA для смартфонов. На рабочем столе интерфейс отображается в компактной
+      мобильной рамке. Для push-уведомлений откройте приложение на телефоне и добавьте на главный экран.
     </p>
-    <div class="mt-5 flex gap-2">
-      <button id="banner-continue" class="btn-primary flex-1">Продолжить в этом режиме</button>
-    </div>
+    <div class="mt-5"><button id="banner-continue" class="btn-primary w-full">Продолжить</button></div>
   </div>
 </div>
 
-<!-- AUTH -->
+<!-- ============ АВТОРИЗАЦИЯ ============ -->
 <section id="auth-screen" class="hidden min-h-screen bp-grid items-center justify-center p-4 relative">
   <div class="scan-line"></div>
   <div class="corner-card bg-white rounded-2xl p-6 w-full max-w-sm relative reveal" style="border:1px solid var(--border);">
     <span class="cm-tr"></span><span class="cm-tl"></span>
-    <div class="text-center mb-6">
-      <div class="text-[10px] uppercase tracking-[0.25em]" style="color: var(--fg-muted);">Events Calendar</div>
-      <h1 class="mt-1 text-2xl">Вход в систему</h1>
-      <p class="mt-2 text-sm" style="color: var(--fg-secondary);">Авторизация через Google-аккаунт</p>
+    <div class="text-center mb-5">
+      <div class="text-[10px] uppercase tracking-[.25em]" style="color:var(--fg-muted);">Events Calendar</div>
+      <h1 class="mt-1 text-2xl" id="auth-title">Вход в систему</h1>
+      <p class="mt-1 text-sm" style="color:var(--fg-secondary);" id="auth-subtitle">Личный календарь — бесплатно</p>
     </div>
-    <button id="btn-google" class="btn-primary w-full flex items-center justify-center gap-2">
-      <svg width="18" height="18" viewBox="0 0 18 18" style="background:#fff; border-radius:4px; padding:1px;">
-        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.841H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/>
-        <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-      </svg>
+    <div class="flex bg-[var(--bg-tertiary)] rounded-xl p-1 mb-4">
+      <button class="tab-btn flex-1 py-2 rounded-lg text-sm font-medium transition" data-tab="login" id="tab-login">Вход</button>
+      <button class="tab-btn flex-1 py-2 rounded-lg text-sm font-medium transition" data-tab="register" id="tab-register">Регистрация</button>
+    </div>
+    <button id="btn-google" class="btn-ghost w-full flex items-center justify-center gap-2 mb-3">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.841H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
       Войти через Google
     </button>
-    <p class="mt-4 text-xs text-center" style="color: var(--fg-muted);">
-      Первый вход создаёт учётную запись.<br/>Доступ открывается после подтверждения администратором.
+    <div class="flex items-center gap-3 my-4">
+      <div class="flex-1 h-px" style="background:var(--border);"></div>
+      <span class="text-xs" style="color:var(--fg-muted);">или email</span>
+      <div class="flex-1 h-px" style="background:var(--border);"></div>
+    </div>
+    <form id="auth-form" class="space-y-3" autocomplete="on">
+      <div id="field-name-wrap" class="hidden">
+        <label class="text-xs" style="color:var(--fg-muted);">Имя и фамилия</label>
+        <input id="field-name" type="text" class="field mt-1" placeholder="Иван Иванов" autocomplete="name" />
+      </div>
+      <div>
+        <label class="text-xs" style="color:var(--fg-muted);">Email</label>
+        <input id="field-email" type="email" class="field mt-1" placeholder="you@mail.ru" autocomplete="email" required />
+      </div>
+      <div>
+        <label class="text-xs" style="color:var(--fg-muted);">Пароль</label>
+        <input id="field-password" type="password" class="field mt-1" placeholder="•••••••" autocomplete="current-password" minlength="6" required />
+      </div>
+      <button type="submit" id="btn-auth-submit" class="btn-primary w-full">Войти</button>
+    </form>
+    <div id="auth-error" class="hidden mt-3 text-sm text-center" style="color:var(--error);"></div>
+    <p class="mt-4 text-[11px] text-center" style="color:var(--fg-muted);">
+      Регистрация и личный календарь бесплатны. Команда — 100 ₽ за участника в месяц, первый месяц бесплатно.
     </p>
-    <div id="auth-error" class="hidden mt-4 text-sm text-center" style="color: var(--error);"></div>
   </div>
 </section>
 
-<!-- PENDING -->
+<!-- ============ БЛОКИРОВКА ============ -->
 <section id="pending-screen" class="hidden min-h-screen bp-grid items-center justify-center p-4">
   <div class="corner-card bg-white rounded-2xl p-6 w-full max-w-sm relative reveal" style="border:1px solid var(--border);">
     <span class="cm-tr"></span><span class="cm-tl"></span>
     <div class="text-center">
-      <div class="text-[10px] uppercase tracking-[0.25em]" style="color: var(--fg-muted);">Статус учётной записи</div>
-      <h2 class="mt-2 text-xl" id="pending-title">Ожидает подтверждения</h2>
-      <p class="mt-3 text-sm" style="color: var(--fg-secondary);" id="pending-text">
-        Ваша учётная запись зарегистрирована. Доступ откроется после подтверждения администратором.
-      </p>
+      <h2 class="mt-2 text-xl" id="pending-title">Учётная запись заблокирована</h2>
+      <p class="mt-3 text-sm" style="color:var(--fg-secondary);" id="pending-text">Доступ закрыт.</p>
       <div class="mt-5 flex flex-col gap-2">
         <button id="btn-refresh" class="btn-primary">Обновить статус</button>
         <button id="btn-logout-pending" class="btn-ghost">Выйти</button>
@@ -353,112 +209,241 @@
   </div>
 </section>
 
-<!-- APP -->
+<!-- ============ ОСНОВНОЙ ЭКРАН ============ -->
 <section id="app-screen" class="hidden">
   <div class="app-frame">
-
-    <!-- ШАПКА -->
-    <header class="app-header px-4">
-      <div class="flex items-center justify-between">
-        <div class="header-title">EVENTS</div>
-        <div class="flex items-center gap-2">
-          <button id="btn-admin" class="hidden pill-btn pill-btn-sq" title="Администрирование">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3Z"/>
-            </svg>
-          </button>
-          <button id="btn-user-menu" class="pill-btn pill-btn-user">
-            <span id="user-avatar" class="avatar-fallback is-square">?</span>
-            <span id="user-name" class="text-sm font-medium truncate max-w-[120px]">—</span>
-          </button>
-        </div>
+    <header class="flex items-center justify-between px-4 pb-2" style="padding-top:calc(16px + var(--safe-top));">
+      <div class="text-[10px] uppercase tracking-[.2em]" style="color:var(--fg-muted);">Events</div>
+      <div class="flex items-center gap-2">
+        <button id="btn-stats" class="p-2 rounded-lg" style="border:1px solid var(--border);" title="Аналитика">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
+        </button>
+        <button id="btn-teams" class="p-2 rounded-lg" style="border:1px solid var(--border);" title="Команды">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </button>
+        <button id="btn-user-menu" class="flex items-center gap-2 p-1 pr-2 rounded-full" style="border:1px solid var(--border);">
+          <span id="user-avatar" class="avatar-fallback w-7 h-7">?</span>
+        </button>
       </div>
     </header>
 
-    <!-- НАВИГАЦИЯ ПО МЕСЯЦУ -->
-    <div class="flex items-center justify-between px-4 py-3">
-      <button id="btn-prev-month" class="pill-btn pill-btn-sq">
+    <!-- Селектор команды -->
+    <div id="team-scroll" class="team-scroll"></div>
+
+    <div class="flex items-center justify-between px-4 py-2">
+      <button id="btn-prev-month" class="p-2 rounded-lg" style="border:1px solid var(--border);">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <div class="text-center">
         <div id="month-label" class="text-lg font-semibold">—</div>
+        <button id="btn-today" class="text-[11px] uppercase tracking-widest" style="color:var(--fg-muted);">Сегодня</button>
       </div>
-      <button id="btn-next-month" class="pill-btn pill-btn-sq">
+      <button id="btn-next-month" class="p-2 rounded-lg" style="border:1px solid var(--border);">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
 
-    <!-- КАЛЕНДАРЬ -->
-    <div class="px-3 pb-2 select-none">
-      <!-- дни недели -->
+    <div id="calendar-wrap" class="px-3 pb-2 select-none">
       <div class="cal-grid mb-1">
-        <div class="text-center text-[11px] font-medium py-1" style="color: var(--fg-muted);">Пн</div>
-        <div class="text-center text-[11px] font-medium py-1" style="color: var(--fg-muted);">Вт</div>
-        <div class="text-center text-[11px] font-medium py-1" style="color: var(--fg-muted);">Ср</div>
-        <div class="text-center text-[11px] font-medium py-1" style="color: var(--fg-muted);">Чт</div>
-        <div class="text-center text-[11px] font-medium py-1" style="color: var(--fg-muted);">Пт</div>
-        <div class="text-center text-[11px] font-medium py-1" style="color: var(--error);">Сб</div>
-        <div class="text-center text-[11px] font-medium py-1" style="color: var(--error);">Вс</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color:var(--fg-muted);">Пн</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color:var(--fg-muted);">Вт</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color:var(--fg-muted);">Ср</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color:var(--fg-muted);">Чт</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color:var(--fg-muted);">Пт</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color:var(--error);">Сб</div>
+        <div class="text-center text-[11px] font-medium py-1" style="color:var(--error);">Вс</div>
       </div>
-
-      <!-- свайп-вьюпорт -->
-      <div id="cal-viewport" class="cal-viewport">
-        <div id="cal-track" class="cal-track">
-          <div id="cal-page-prev" class="cal-page"><div class="cal-grid gap-1"></div></div>
-          <div id="cal-page-curr" class="cal-page"><div class="cal-grid gap-1"></div></div>
-          <div id="cal-page-next" class="cal-page"><div class="cal-grid gap-1"></div></div>
-        </div>
-      </div>
+      <div id="calendar-grid" class="cal-grid gap-1"></div>
     </div>
 
-    <!-- кнопка добавления для выбранного дня -->
     <div class="px-4 pt-1 pb-3 flex items-center justify-between">
       <div>
         <div id="selected-date-label" class="text-sm font-medium">—</div>
-        <div id="selected-date-sub" class="text-xs" style="color: var(--fg-muted);">выбран</div>
+        <div id="selected-date-sub" class="text-xs" style="color:var(--fg-muted);">выбран</div>
       </div>
-      <button id="btn-new-event" class="btn-primary text-sm" style="padding: 10px 14px;">+ Мероприятие</button>
+      <button id="btn-new-event" class="btn-primary text-sm" style="padding:10px 14px;">+ Мероприятие</button>
     </div>
 
-    <!-- список мероприятий месяца -->
     <div class="px-4 pb-28">
       <div class="flex items-center justify-between mb-2">
-        <h3 id="events-section-title" class="text-sm font-semibold">Мероприятия месяца</h3>
-        <span id="events-count" class="text-xs" style="color: var(--fg-muted);">0</span>
+        <h3 class="text-sm font-semibold">Ближайшие мероприятия</h3>
+        <div class="flex items-center gap-2">
+          <button id="btn-ical" class="text-[11px] px-2 py-1 rounded-md" style="border:1px solid var(--border);color:var(--fg-muted);">.ics</button>
+          <span id="events-count" class="text-xs" style="color:var(--fg-muted);">0</span>
+        </div>
       </div>
       <div id="events-list" class="space-y-2"></div>
-      <div id="events-empty" class="hidden text-center py-10 text-sm" style="color: var(--fg-muted);">
-        В этом месяце мероприятий нет
+      <div id="events-empty" class="hidden text-center py-10 text-sm" style="color:var(--fg-muted);">
+        Пока нет ближайших мероприятий
       </div>
     </div>
   </div>
 </section>
 
-<!-- ============= МОДАЛКИ ============= -->
+<!-- ============ МЕНЮ ПОЛЬЗОВАТЕЛЯ ============ -->
 <div id="user-menu" class="hidden">
   <div class="modal-backdrop" data-close="user-menu"></div>
   <div class="modal-sheet">
     <div class="sheet-handle"></div>
     <div class="px-5 pt-4 pb-6">
-      <div class="flex items-center gap-3 mb-5">
+      <div class="flex items-center gap-3 mb-4">
         <span id="menu-avatar" class="avatar-fallback w-12 h-12 text-base">?</span>
         <div class="min-w-0">
           <div id="menu-name" class="font-semibold truncate">—</div>
-          <div id="menu-email" class="text-xs truncate" style="color: var(--fg-muted);">—</div>
+          <div id="menu-email" class="text-xs truncate" style="color:var(--fg-muted);">—</div>
         </div>
       </div>
-<div class="space-y-2">
-  <button id="btn-push" class="btn-ghost w-full text-left">🔔 Уведомления: <span id="btn-push-state">проверка…</span></button>
-  <button id="btn-push-test-local" class="btn-ghost w-full text-left">🧪 Тест 1: локально через SW</button>
-  <button id="btn-push-test-server" class="btn-ghost w-full text-left">🧪 Тест 2: с сервера через Apple</button>
-  <button id="btn-push-reset" class="btn-ghost w-full text-left">♻️ Пересоздать подписку</button>
-  <pre id="push-debug" class="text-[11px] p-2 rounded" style="background:rgba(0,0,0,0.04); white-space:pre-wrap; max-height:200px; overflow-y:auto;"></pre>
-  <button id="btn-logout" class="btn-ghost w-full text-left">Выйти</button>
-</div>
+
+      <div class="p-3 rounded-xl mb-4 flex items-center justify-between" style="border:1px solid var(--border);">
+        <div>
+          <div class="text-xs" style="color:var(--fg-muted);">Баланс</div>
+          <div id="menu-balance" class="text-xl font-semibold">— ₽</div>
+        </div>
+        <button id="btn-billing" class="btn-ghost text-sm" style="padding:8px 14px;">Пополнить</button>
+      </div>
+
+      <h4 class="text-sm font-semibold mb-2">Уведомления</h4>
+      <div class="p-3 rounded-xl mb-2" style="border:1px solid var(--border);">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-sm font-medium">Push на это устройство</div>
+            <div id="push-hint" class="text-xs mt-0.5" style="color:var(--fg-muted);">—</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="push-toggle" /><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="space-y-1.5 mb-3">
+        <label class="flex items-center justify-between p-3 rounded-xl" style="border:1px solid var(--border);">
+          <span class="text-sm">Новые мероприятия</span>
+          <span class="toggle"><input type="checkbox" id="pref-create" /><span class="slider"></span></span>
+        </label>
+        <label class="flex items-center justify-between p-3 rounded-xl" style="border:1px solid var(--border);">
+          <span class="text-sm">Меня назначили ответственным</span>
+          <span class="toggle"><input type="checkbox" id="pref-assign" /><span class="slider"></span></span>
+        </label>
+        <label class="flex items-center justify-between p-3 rounded-xl" style="border:1px solid var(--border);">
+          <span class="text-sm">Изменения и переносы</span>
+          <span class="toggle"><input type="checkbox" id="pref-change" /><span class="slider"></span></span>
+        </label>
+      </div>
+      <div class="mb-4">
+        <label class="text-xs" style="color:var(--fg-muted);">Напоминание перед началом</label>
+        <select id="pref-reminder" class="field mt-1 text-sm">
+          <option value="0">Выключено</option>
+          <option value="15">за 15 минут</option>
+          <option value="30">за 30 минут</option>
+          <option value="60">за 1 час</option>
+          <option value="120">за 2 часа</option>
+          <option value="180">за 3 часа</option>
+          <option value="1440">за сутки</option>
+        </select>
+      </div>
+      <div class="space-y-2">
+        <button id="btn-templates" class="btn-ghost w-full text-left">Шаблоны мероприятий</button>
+        <button id="btn-logout" class="btn-ghost w-full text-left">Выйти</button>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- ============ КОМАНДЫ ============ -->
+<div id="teams-modal" class="hidden">
+  <div class="modal-backdrop" data-close="teams-modal"></div>
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="px-5 pt-4 pb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">Мои команды</h3>
+        <button data-close="teams-modal" class="p-2 -mr-2 rounded-lg" style="color:var(--fg-muted);">✕</button>
+      </div>
+      <div id="teams-list" class="space-y-2 mb-4"></div>
+      <div class="space-y-2">
+        <div class="flex gap-2">
+          <input id="new-team-name" class="field text-sm" placeholder="Название новой команды" style="padding:10px 12px;" />
+          <button id="btn-create-team" class="btn-primary text-sm" style="padding:10px 14px;">Создать</button>
+        </div>
+        <div class="flex gap-2">
+          <input id="invite-code-input" class="field text-sm" placeholder="Код приглашения" style="padding:10px 12px;" />
+          <button id="btn-accept-invite" class="btn-ghost text-sm" style="padding:10px 14px;">Вступить</button>
+        </div>
+      </div>
+      <p class="text-[11px] mt-3" style="color:var(--fg-secondary);">
+        Личный календарь бесплатен всегда. За командой закрепляется тариф
+        <b>100 ₽ за участника в месяц</b>, первый месяц — бесплатно.
+        Списание идёт с баланса владельца команды.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ КАРТОЧКА КОМАНДЫ ============ -->
+<div id="team-detail" class="hidden">
+  <div class="modal-backdrop" data-close="team-detail"></div>
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="px-5 pt-4 pb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 id="td-name" class="text-lg font-semibold truncate">—</h3>
+        <button data-close="team-detail" class="p-2 -mr-2 rounded-lg" style="color:var(--fg-muted);">✕</button>
+      </div>
+      <div id="td-billing" class="stat-tile mb-4"></div>
+      <h4 class="text-sm font-semibold mb-2">Участники</h4>
+      <div id="td-members" class="space-y-1.5 mb-4"></div>
+      <div id="td-owner-tools" class="space-y-2 hidden">
+        <button id="btn-invite" class="btn-ghost w-full text-sm">Создать код приглашения</button>
+        <div id="invite-result" class="hidden p-3 rounded-xl text-center" style="border:1px dashed var(--border);">
+          <div class="text-xs" style="color:var(--fg-muted);">Код действует 14 дней</div>
+          <div id="invite-code" class="text-2xl font-semibold tracking-widest mt-1">—</div>
+          <button id="btn-copy-code" class="text-xs mt-1" style="color:var(--info);">Скопировать</button>
+        </div>
+        <button id="btn-rename-team" class="btn-ghost w-full text-sm">Переименовать</button>
+        <button id="btn-transfer-team" class="btn-ghost w-full text-sm">Передать владение</button>
+        <button id="btn-delete-team" class="btn-ghost w-full text-sm" style="color:var(--error);border-color:rgba(220,38,38,.3);">Удалить команду</button>
+      </div>
+      <button id="btn-leave-team" class="btn-ghost w-full text-sm hidden" style="color:var(--error);border-color:rgba(220,38,38,.3);">Покинуть команду</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ БИЛЛИНГ ============ -->
+<div id="billing-modal" class="hidden">
+  <div class="modal-backdrop" data-close="billing-modal"></div>
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="px-5 pt-4 pb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">Баланс и платежи</h3>
+        <button data-close="billing-modal" class="p-2 -mr-2 rounded-lg" style="color:var(--fg-muted);">✕</button>
+      </div>
+      <div class="stat-tile mb-4 text-center">
+        <div class="text-xs" style="color:var(--fg-muted);">Текущий баланс</div>
+        <div id="billing-balance" class="text-3xl font-semibold mt-1">— ₽</div>
+        <div id="billing-monthly" class="text-xs mt-1" style="color:var(--fg-muted);">—</div>
+      </div>
+      <div class="p-3 rounded-xl mb-4" style="border:1px solid var(--border);">
+        <div class="text-sm font-medium mb-2">Пополнить баланс</div>
+        <div class="grid grid-cols-4 gap-1.5 mb-2">
+          <button class="topup-preset btn-ghost text-xs" style="padding:8px 4px;" data-sum="50000">500 ₽</button>
+          <button class="topup-preset btn-ghost text-xs" style="padding:8px 4px;" data-sum="100000">1 000 ₽</button>
+          <button class="topup-preset btn-ghost text-xs" style="padding:8px 4px;" data-sum="300000">3 000 ₽</button>
+          <button class="topup-preset btn-ghost text-xs" style="padding:8px 4px;" data-sum="500000">5 000 ₽</button>
+        </div>
+        <div class="flex gap-2">
+          <input id="topup-amount" type="number" min="100" max="100000" step="100"
+                 class="field text-sm" placeholder="Своя сумма, ₽" style="padding:10px 12px;" />
+          <button id="btn-topup" class="btn-primary text-sm" style="padding:10px 16px;">Оплатить</button>
+        </div>
+        <div id="topup-hint" class="text-[11px] mt-2" style="color:var(--fg-muted);">
+          Оплата картой через ЮKassa. Средства зачисляются автоматически.
+        </div>
+      </div>
+      <h4 class="text-sm font-semibold mb-2">История операций</h4>
+      <div id="billing-tx" class="space-y-1.5 max-h-[40vh] overflow-y-auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ФОРМА МЕРОПРИЯТИЯ ============ -->
 <div id="event-modal" class="hidden">
   <div class="modal-backdrop" data-close="event-modal"></div>
   <div class="modal-sheet">
@@ -466,40 +451,73 @@
     <div class="px-5 pt-4 pb-6">
       <div class="flex items-center justify-between mb-4">
         <h3 id="event-modal-title" class="text-lg font-semibold">Новое мероприятие</h3>
-        <button data-close="event-modal" class="p-2 -mr-2 rounded-lg" style="color: var(--fg-muted);">✕</button>
+        <button data-close="event-modal" class="p-2 -mr-2 rounded-lg" style="color:var(--fg-muted);">✕</button>
       </div>
       <form id="event-form" class="space-y-3">
-        <div>
-          <label class="text-xs" style="color: var(--fg-muted);">Название</label>
-          <input id="ef-title" type="text" class="field mt-1" placeholder="Например: Выезд на объект" required maxlength="200" />
+        <div id="ef-team-wrap">
+          <label class="text-xs" style="color:var(--fg-muted);">Календарь</label>
+          <select id="ef-team" class="field mt-1 text-sm"></select>
         </div>
-        <div class="grid grid-cols-3 gap-2">
-          <div class="col-span-3 sm:col-span-1">
-            <label class="text-xs" style="color: var(--fg-muted);">Дата</label>
+        <div id="ef-template-wrap">
+          <label class="text-xs" style="color:var(--fg-muted);">Шаблон (необязательно)</label>
+          <select id="ef-template" class="field mt-1 text-sm"><option value="">— без шаблона —</option></select>
+        </div>
+        <div>
+          <label class="text-xs" style="color:var(--fg-muted);">Название</label>
+          <input id="ef-title" type="text" class="field mt-1" placeholder="Например: Свадьба в Резиденции" required maxlength="200" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="col-span-2">
+            <label class="text-xs" style="color:var(--fg-muted);">Дата</label>
             <input id="ef-date" type="date" class="field mt-1" required />
           </div>
           <div>
-            <label class="text-xs" style="color: var(--fg-muted);">С</label>
+            <label class="text-xs" style="color:var(--fg-muted);">С</label>
             <input id="ef-start" type="time" class="field mt-1" required />
           </div>
           <div>
-            <label class="text-xs" style="color: var(--fg-muted);">До</label>
+            <label class="text-xs" style="color:var(--fg-muted);">До</label>
             <input id="ef-end" type="time" class="field mt-1" required />
           </div>
         </div>
         <div>
-          <label class="text-xs" style="color: var(--fg-muted);">Ответственный</label>
+          <label class="text-xs" style="color:var(--fg-muted);">Ответственный</label>
           <select id="ef-responsible" class="field mt-1"></select>
         </div>
+        <div>
+          <label class="text-xs" style="color:var(--fg-muted);">Место</label>
+          <input id="ef-location" type="text" class="field mt-1" placeholder="Адрес или площадка" maxlength="200" />
+        </div>
+        <div>
+          <label class="text-xs" style="color:var(--fg-muted);">Заметки</label>
+          <textarea id="ef-notes" class="field mt-1" placeholder="Детали, контакты, пожелания…"></textarea>
+        </div>
+        <div id="ef-recurrence-wrap" class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs" style="color:var(--fg-muted);">Повтор</label>
+            <select id="ef-freq" class="field mt-1 text-sm">
+              <option value="none">Без повтора</option>
+              <option value="daily">Ежедневно</option>
+              <option value="weekly">Еженедельно</option>
+              <option value="biweekly">Раз в 2 недели</option>
+              <option value="monthly">Ежемесячно</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs" style="color:var(--fg-muted);">Повторов</label>
+            <input id="ef-count" type="number" class="field mt-1 text-sm" min="1" max="60" value="1" />
+          </div>
+        </div>
         <div class="flex gap-2 pt-1">
-          <button type="submit" class="btn-primary flex-1">Сохранить</button>
-          <button type="button" id="ef-delete" class="btn-ghost hidden" style="color: var(--error); border-color: rgba(220,38,38,.3);">Удалить</button>
+          <button type="submit" id="ef-submit" class="btn-primary flex-1">Сохранить</button>
+          <button type="button" id="ef-delete" class="btn-ghost hidden" style="color:var(--error);border-color:rgba(220,38,38,.3);">Удалить</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
+<!-- ============ ПРОСМОТР МЕРОПРИЯТИЯ ============ -->
 <div id="event-view" class="hidden">
   <div class="modal-backdrop" data-close="event-view"></div>
   <div class="modal-sheet">
@@ -507,26 +525,31 @@
     <div class="px-5 pt-4 pb-6">
       <div class="flex items-start justify-between gap-3 mb-3">
         <div class="min-w-0">
-          <div id="ev-date" class="text-xs" style="color: var(--fg-muted);">—</div>
+          <div id="ev-team" class="text-[11px] font-medium mb-0.5">—</div>
+          <div id="ev-date" class="text-xs" style="color:var(--fg-muted);">—</div>
           <h3 id="ev-title" class="text-lg font-semibold mt-0.5 break-words">—</h3>
-          <div id="ev-time" class="text-sm mt-0.5" style="color: var(--fg-secondary);">—</div>
-          <div class="mt-2 flex items-center gap-2">
+          <div id="ev-time" class="text-sm mt-0.5" style="color:var(--fg-secondary);">—</div>
+          <div id="ev-location" class="text-sm mt-0.5 hidden" style="color:var(--fg-secondary);"></div>
+          <div class="mt-2 flex items-center gap-2 flex-wrap">
             <span id="ev-resp-avatar" class="avatar-fallback w-6 h-6 text-[10px]">?</span>
             <span id="ev-resp-name" class="text-sm">—</span>
             <span class="badge badge-muted">ответственный</span>
+            <span id="ev-series" class="badge badge-info hidden">серия</span>
           </div>
+          <div id="ev-notes" class="hidden mt-2 text-sm p-2 rounded-lg" style="background:var(--bg-secondary);color:var(--fg-secondary);"></div>
         </div>
         <div class="flex gap-1 flex-shrink-0">
-          <button id="ev-edit" class="pill-btn pill-btn-sq" title="Редактировать">
+          <button id="ev-edit" class="p-2 rounded-lg" style="border:1px solid var(--border);" title="Редактировать">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="m18.5 2.5 3 3L12 15H9v-3Z"/></svg>
           </button>
-          <button data-close="event-view" class="pill-btn pill-btn-sq">✕</button>
+          <button data-close="event-view" class="p-2 rounded-lg" style="border:1px solid var(--border);">✕</button>
         </div>
       </div>
+
       <div class="mt-4">
         <div class="flex items-center justify-between mb-2">
           <h4 class="text-sm font-semibold">Требуемые материалы</h4>
-          <span id="materials-count" class="text-xs" style="color: var(--fg-muted);">0</span>
+          <span id="materials-count" class="text-xs" style="color:var(--fg-muted);">0</span>
         </div>
         <div id="materials-list" class="space-y-1.5"></div>
         <div class="flex gap-2 mt-2">
@@ -534,10 +557,11 @@
           <button id="btn-add-material" class="btn-primary text-sm" style="padding:10px 12px;">+</button>
         </div>
       </div>
+
       <div class="mt-5">
         <div class="flex items-center justify-between mb-2">
           <h4 class="text-sm font-semibold">Список действий</h4>
-          <span id="actions-count" class="text-xs" style="color: var(--fg-muted);">0</span>
+          <span id="actions-count" class="text-xs" style="color:var(--fg-muted);">0</span>
         </div>
         <div id="actions-list" class="space-y-1.5"></div>
         <div class="flex gap-2 mt-2">
@@ -545,25 +569,66 @@
           <button id="btn-add-action" class="btn-primary text-sm" style="padding:10px 12px;">+</button>
         </div>
       </div>
+
+      <div class="mt-5">
+        <div class="flex items-center justify-between mb-2">
+          <h4 class="text-sm font-semibold">Файлы и фото</h4>
+          <span id="attach-count" class="text-xs" style="color:var(--fg-muted);">0</span>
+        </div>
+        <div id="attach-list" class="flex flex-wrap gap-2 mb-2"></div>
+        <label class="btn-ghost block text-center text-sm cursor-pointer" style="padding:10px 12px;">
+          Прикрепить файл
+          <input id="attach-input" type="file" class="hidden" accept="image/*,application/pdf" />
+        </label>
+      </div>
+
+      <div class="mt-5 flex gap-2">
+        <button id="ev-save-template" class="btn-ghost flex-1 text-sm">Сохранить как шаблон</button>
+        <button id="ev-ics" class="btn-ghost text-sm">.ics</button>
+      </div>
     </div>
   </div>
 </div>
 
-<div id="admin-modal" class="hidden">
-  <div class="modal-backdrop" data-close="admin-modal"></div>
+<!-- ============ ШАБЛОНЫ ============ -->
+<div id="templates-modal" class="hidden">
+  <div class="modal-backdrop" data-close="templates-modal"></div>
   <div class="modal-sheet">
     <div class="sheet-handle"></div>
     <div class="px-5 pt-4 pb-6">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="text-lg font-semibold">Администрирование</h3>
-        <button data-close="admin-modal" class="p-2 -mr-2 rounded-lg" style="color: var(--fg-muted);">✕</button>
+        <h3 class="text-lg font-semibold">Шаблоны мероприятий</h3>
+        <button data-close="templates-modal" class="p-2 -mr-2 rounded-lg" style="color:var(--fg-muted);">✕</button>
       </div>
-      <div class="flex bg-[var(--bg-tertiary)] rounded-xl p-1 mb-4">
-        <button class="admin-tab flex-1 py-2 rounded-lg text-sm font-medium" data-adm="users">Пользователи</button>
-        <button class="admin-tab flex-1 py-2 rounded-lg text-sm font-medium" data-adm="logs">Журнал</button>
+      <p class="text-xs mb-3" style="color:var(--fg-secondary);">
+        Шаблон принадлежит команде и хранит название, время, место и оба чек-листа.
+      </p>
+      <div id="templates-list" class="space-y-2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ АНАЛИТИКА ============ -->
+<div id="stats-modal" class="hidden">
+  <div class="modal-backdrop" data-close="stats-modal"></div>
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="px-5 pt-4 pb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold">Аналитика</h3>
+        <button data-close="stats-modal" class="p-2 -mr-2 rounded-lg" style="color:var(--fg-muted);">✕</button>
       </div>
-      <div id="adm-users" class="space-y-2"></div>
-      <div id="adm-logs" class="hidden space-y-1.5 max-h-[60vh] overflow-y-auto"></div>
+      <div class="flex gap-2 mb-4">
+        <div class="flex-1">
+          <label class="text-xs" style="color:var(--fg-muted);">С</label>
+          <input id="stats-from" type="date" class="field mt-1 text-sm" />
+        </div>
+        <div class="flex-1">
+          <label class="text-xs" style="color:var(--fg-muted);">По</label>
+          <input id="stats-to" type="date" class="field mt-1 text-sm" />
+        </div>
+      </div>
+      <div id="stats-body" class="space-y-4"></div>
     </div>
   </div>
 </div>
@@ -571,989 +636,1346 @@
 <div id="toasts" class="fixed bottom-5 left-0 right-0 z-[80] flex flex-col items-center gap-2 pointer-events-none px-4"></div>
 
 <script type="module">
-  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
-  // ===== CONFIG (новый проект, Ireland) =====
-  const SUPABASE_URL  = 'https://udhusnopowfnenymsvqg.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkaHVzbm9wb3dmbmVueW1zdnFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNzg5MjMsImV4cCI6MjA5Mjk1NDkyM30.KcNVhc4uT6dtydG0GBQcWtXvszWAT-Jp5UXMBncVwcg';
+/* ============================================================
+   КОНФИГУРАЦИЯ
+   ============================================================ */
+const SUPABASE_URL  = 'https://udhusnopowfnenymsvqg.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkaHVzbm9wb3dmbmVueW1zdnFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNzg5MjMsImV4cCI6MjA5Mjk1NDkyM30.KcNVhc4uT6dtydG0GBQcWtXvszWAT-Jp5UXMBncVwcg';
 
-  const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-  });
-  window.sb = sb;
+// Скопируй из текущего рабочего index.html
+const VAPID_PUBLIC_KEY = 'ВСТАВЬ_VAPID_PUBLIC_KEY_ИЗ_ТЕКУЩЕГО_INDEX_HTML';
 
- // ===== PUSH NOTIFICATIONS (diagnostic build) =====
-  const VAPID_PUBLIC_KEY = 'BEeqhD_DN0_AAJ6JbIrR8BLx7xHWcO9XHlQNAdg56vBJS4skid84mm6ppiE5RjsZz2PMD-hTNaAcuRAeJ3tHBdk';
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
 
-  function urlBase64ToUint8Array(b64) {
-    const pad = '='.repeat((4 - b64.length % 4) % 4);
-    const s = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
-    const raw = atob(s); const out = new Uint8Array(raw.length);
-    for (let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
-    return out;
+/* ============================================================
+   СОСТОЯНИЕ
+   ============================================================ */
+const state = {
+  session:null, me:null,
+  teams:[],            // мои команды
+  members:{},          // team_id -> [users]
+  allPeople:[],        // все, кого я вижу
+  currentTeam:null,    // null = все календари
+  templates:[],
+  currentMonth:new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  selectedDate:new Date(),
+  events:[], openedEventId:null, editingEventId:null,
+  openedTeamId:null,
+  authMode:'login', channels:[], booted:false,
+  balance:0,
+};
+
+/* ============================================================
+   УТИЛИТЫ
+   ============================================================ */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const pad = n=>String(n).padStart(2,'0');
+const toDateInput = d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const fromDateInput = s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
+const sameDay=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+
+const ruMonths=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const ruMonthsNom=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const ruWeekdays=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+
+const formatDateLong=d=>`${d.getDate()} ${ruMonths[d.getMonth()]} ${d.getFullYear()} г.`;
+const formatTime=t=>t?String(t).slice(0,5):'';
+const weekdayRu=d=>ruWeekdays[d.getDay()];
+const escapeHtml=s=>(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rub = k => (k/100).toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:2}) + ' ₽';
+
+function initials(name,email){
+  const src=(name||email||'?').trim();
+  const p=src.split(/\s+/).filter(Boolean);
+  return (p.length>=2?(p[0][0]+p[1][0]):src.slice(0,2)).toUpperCase();
+}
+
+// Стабильный цвет команды по её id
+const TEAM_COLORS=['#2563EB','#16A34A','#D97706','#DC2626','#7C3AED','#0891B2','#DB2777','#65A30D'];
+function teamColor(teamId){
+  if(!teamId) return '#0A0A0A';
+  let h=0; for(let i=0;i<teamId.length;i++) h=(h*31+teamId.charCodeAt(i))>>>0;
+  return TEAM_COLORS[h%TEAM_COLORS.length];
+}
+const teamById = id => state.teams.find(t=>t.id===id);
+const teamName = id => { const t=teamById(id); return t ? (t.is_personal?'Личный календарь':t.name) : '—'; };
+
+function toast(msg,kind='info',ms=3000){
+  const el=document.createElement('div');
+  el.className='toast pointer-events-auto';
+  if(kind==='error') el.style.background='var(--error)';
+  if(kind==='success') el.style.background='var(--success)';
+  el.textContent=msg;
+  $('#toasts').appendChild(el);
+  setTimeout(()=>el.remove(),ms);
+}
+
+const show=id=>{const e=$(`#${id}`);e.classList.remove('hidden');e.classList.add('flex');};
+const hide=id=>{const e=$(`#${id}`);e.classList.add('hidden');e.classList.remove('flex');};
+const open=id=>$(`#${id}`).classList.remove('hidden');
+const close=id=>$(`#${id}`).classList.add('hidden');
+
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-close]');
+  if(t) close(t.getAttribute('data-close'));
+});
+
+const isIOS=()=>/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+
+/* ============================================================
+   ДЕСКТОПНЫЙ БАННЕР
+   ============================================================ */
+function checkDesktop(){
+  if(window.matchMedia('(min-width: 900px) and (pointer: fine)').matches
+     && !sessionStorage.getItem('desktop_banner_dismissed')) show('desktop-banner');
+}
+$('#banner-continue').addEventListener('click',()=>{
+  sessionStorage.setItem('desktop_banner_dismissed','1'); hide('desktop-banner');
+});
+
+/* ============================================================
+   АВТОРИЗАЦИЯ
+   ============================================================ */
+function setAuthTab(mode){
+  state.authMode=mode;
+  const on=(b,a)=>{b.classList.toggle('bg-white',a);b.style.boxShadow=a?'0 1px 2px rgba(0,0,0,.05)':'';};
+  on($('#tab-login'),mode==='login'); on($('#tab-register'),mode==='register');
+  $('#auth-title').textContent=mode==='login'?'Вход в систему':'Регистрация';
+  $('#auth-subtitle').textContent=mode==='login'?'Личный календарь — бесплатно':'Создайте учётную запись';
+  $('#btn-auth-submit').textContent=mode==='login'?'Войти':'Зарегистрироваться';
+  $('#field-name-wrap').classList.toggle('hidden',mode==='login');
+  $('#field-password').autocomplete=mode==='login'?'current-password':'new-password';
+  $('#auth-error').classList.add('hidden');
+}
+$$('.tab-btn').forEach(b=>b.addEventListener('click',()=>setAuthTab(b.dataset.tab)));
+function showAuthError(m){const e=$('#auth-error');e.textContent=m;e.classList.remove('hidden');}
+
+$('#btn-google').addEventListener('click',async()=>{
+  const {error}=await sb.auth.signInWithOAuth({provider:'google',
+    options:{redirectTo:window.location.origin+window.location.pathname}});
+  if(error) showAuthError(error.message);
+});
+
+$('#auth-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const email=$('#field-email').value.trim(), password=$('#field-password').value;
+  const name=$('#field-name').value.trim();
+  $('#btn-auth-submit').disabled=true;
+  try{
+    if(state.authMode==='login'){
+      const {error}=await sb.auth.signInWithPassword({email,password});
+      if(error) throw error;
+    }else{
+      const {error}=await sb.auth.signUp({email,password,
+        options:{data:{full_name:name||email.split('@')[0]}}});
+      if(error) throw error;
+      toast('Аккаунт создан','success');
+    }
+  }catch(err){ showAuthError(err.message); }
+  finally{ $('#btn-auth-submit').disabled=false; }
+});
+
+$('#btn-refresh').addEventListener('click',()=>route());
+$('#btn-logout-pending').addEventListener('click',async()=>{await sb.auth.signOut();location.reload();});
+
+/* ============================================================
+   МАРШРУТИЗАЦИЯ
+   ============================================================ */
+async function route(){
+  const {data:{session}}=await sb.auth.getSession();
+  state.session=session;
+
+  if(!session){
+    hide('app-screen');hide('pending-screen');show('auth-screen');setAuthTab('login');return;
   }
 
-  function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+  let me=await loadMe();
+  if(!me){ await new Promise(r=>setTimeout(r,700)); me=await loadMe(); }
+  if(!me){
+    await sb.auth.signOut();
+    hide('app-screen');hide('pending-screen');show('auth-screen');
+    showAuthError('Не удалось получить профиль. Войдите ещё раз.');return;
+  }
+  state.me=me;
 
-  function dbg(...args){
-    const el = $('#push-debug'); if(!el) return;
-    const ts = new Date().toLocaleTimeString('ru-RU');
-    const line = '[' + ts + '] ' + args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
-    el.textContent = (el.textContent ? el.textContent + '\n' : '') + line;
-    el.scrollTop = el.scrollHeight;
-    console.log('[push]', ...args);
+  if(me.status==='blocked'){
+    hide('auth-screen');hide('app-screen');show('pending-screen');return;
   }
 
-  async function getReg() {
-    if (!('serviceWorker' in navigator)) return null;
-    let reg = await navigator.serviceWorker.getRegistration();
-    if (!reg) reg = await navigator.serviceWorker.register('./sw.js');
-    await navigator.serviceWorker.ready;
-    return reg;
-  }
+  hide('auth-screen');hide('pending-screen');show('app-screen');
+  await bootApp();
+}
 
-  async function getPushState() {
-    if (!pushSupported()) return 'unsupported';
-    if (Notification.permission === 'denied') return 'denied';
-    const reg = await getReg(); if (!reg) return 'unsupported';
-    const sub = await reg.pushManager.getSubscription();
-    if (sub) return 'on';
-    return Notification.permission === 'granted' ? 'off' : 'prompt';
-  }
+async function loadMe(){
+  const {data,error}=await sb.from('users').select('*').eq('id',state.session.user.id).maybeSingle();
+  if(error){console.error(error);return null;}
+  return data;
+}
 
-  async function refreshPushButton() {
-    const btn = $('#btn-push'), lbl = $('#btn-push-state');
-    if (!btn || !lbl) return;
-    const s = await getPushState();
-    const map = {
-      unsupported: { text: 'не поддерживается', disabled: true },
-      denied:      { text: 'заблокированы в браузере', disabled: true },
-      prompt:      { text: 'выкл — нажмите, чтобы включить', disabled: false },
-      off:         { text: 'выкл — нажмите, чтобы включить', disabled: false },
-      on:          { text: 'вкл — нажмите, чтобы выключить', disabled: false },
-    };
-    const m = map[s] || map.unsupported;
-    lbl.textContent = m.text;
-    btn.disabled = m.disabled;
-    btn.dataset.pushState = s;
+sb.auth.onAuthStateChange(async(event,session)=>{
+  if(event==='SIGNED_IN'&&session&&!state.session){
+    sb.rpc('log_action',{p_action_type:'auth.login',p_entity_type:'auth',
+      p_entity_id:session.user.id,p_details:{provider:session.user.app_metadata?.provider||'email'}}).catch(()=>{});
   }
+  if(event==='SIGNED_OUT') unsubscribeRealtime();
+  state.session=session;
+  await route();
+});
 
-  async function subscribeToPush() {
-    if (!pushSupported()) { toast('Браузер не поддерживает push'); return false; }
-    if (Notification.permission === 'denied') { toast('Уведомления заблокированы в браузере'); return false; }
-    try {
-      let perm = Notification.permission;
-      if (perm !== 'granted') perm = await Notification.requestPermission();
-      if (perm !== 'granted') return false;
-      const reg = await getReg(); if (!reg) return false;
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-        });
-      }
-      const json = sub.toJSON();
-      const { error } = await sb.from('push_subscriptions').upsert({
-        user_id: state.me.id, endpoint: sub.endpoint,
-        p256dh: json.keys?.p256dh, auth: json.keys?.auth, user_agent: navigator.userAgent,
-      }, { onConflict: 'endpoint' });
-      if (error) { dbg('save sub failed', error.message); toast('Не удалось сохранить подписку'); return false; }
-      dbg('subscribed', sub.endpoint.slice(0, 60) + '…');
-      toast('Уведомления включены');
-      return true;
-    } catch (e) { dbg('subscribe failed', String(e)); toast('Не удалось включить'); return false; }
+/* ============================================================
+   ЗАПУСК
+   ============================================================ */
+async function bootApp(){
+  renderMe();
+  await loadTeams();
+  await Promise.all([loadPeople(),loadTemplates(),loadBalance()]);
+  if(!state.booted){
+    state.selectedDate=new Date();
+    state.currentMonth=new Date(state.selectedDate.getFullYear(),state.selectedDate.getMonth(),1);
+    state.booted=true;
   }
+  await loadEvents();
+  renderTeamSelector(); renderCalendar(); renderEventsList();
+  setupRealtime(); refreshPushUI(); loadPrefsIntoUI();
+  checkPendingPayment();
+}
 
-  async function unsubscribeFromPush() {
-    try {
-      const reg = await getReg();
-      const sub = reg && await reg.pushManager.getSubscription();
-      if (sub) {
-        const ep = sub.endpoint;
-        await sub.unsubscribe();
-        await sb.from('push_subscriptions').delete().eq('endpoint', ep);
-        dbg('unsubscribed', ep.slice(0,60)+'…');
-      }
-      toast('Уведомления выключены');
-      return true;
-    } catch (e) { dbg('unsubscribe failed', String(e)); return false; }
-  }
+// Вебхук ЮKassa может прийти на секунду-другую позже возврата пользователя,
+// поэтому несколько раз перепроверяем баланс.
+async function checkPendingPayment(){
+  const expected=sessionStorage.getItem('awaiting_payment');
+  if(!expected) return;
+  sessionStorage.removeItem('awaiting_payment');
 
-  async function syncPushSubscription() {
-    if (!pushSupported() || !state.me) return;
-    try {
-      const reg = await getReg(); if (!reg) return;
-      const sub = await reg.pushManager.getSubscription();
-      if (!sub) return;
-      const json = sub.toJSON();
-      await sb.from('push_subscriptions').upsert({
-        user_id: state.me.id, endpoint: sub.endpoint,
-        p256dh: json.keys?.p256dh, auth: json.keys?.auth, user_agent: navigator.userAgent,
-      }, { onConflict: 'endpoint' });
-    } catch(_) {}
-  }
+  const before=state.balance;
+  toast('Проверяем зачисление…');
 
-  // ===== ТЕСТ 1: локально через SW (изолируем permission/SW) =====
-  async function testLocalNotification() {
-    if (!pushSupported()) { dbg('Браузер не поддерживает push'); return; }
-    if (Notification.permission !== 'granted') {
-      dbg('Permission =', Notification.permission, '— разрешите уведомления');
+  for(let i=0;i<6;i++){
+    await new Promise(r=>setTimeout(r,2000));
+    await loadBalance();
+    if(state.balance>before){
+      toast(`Баланс пополнен: ${rub(state.balance-before)}`,'success',5000);
+      await loadTeams(); renderTeamSelector();
       return;
     }
-    const reg = await getReg(); if (!reg) { dbg('SW не зарегистрирован'); return; }
-    const ctrl = navigator.serviceWorker.controller;
-    if (!ctrl) {
-      dbg('Нет controller. Перезагрузите страницу (Cmd+R) и нажмите снова.');
-      return;
-    }
-    dbg('Прошу SW показать локальную нотификацию…');
-    // одноразовый канал ответа
-    const ch = new MessageChannel();
-    ch.port1.onmessage = (ev) => {
-      const r = ev.data || {};
-      if (r.type === 'show_test_notification_result') {
-        if (r.ok) dbg('✅ ТЕСТ 1 успех. SW версия:', r.version, '— значит permission и SW в порядке.');
-        else dbg('❌ ТЕСТ 1 провалился:', r.error, 'SW версия:', r.version);
-      }
-    };
-    ctrl.postMessage({ type: 'show_test_notification' }, [ch.port2]);
   }
+  toast('Платёж пока не зачислен. Если оплата прошла, баланс обновится в течение пары минут.',
+        'info',7000);
+}
 
-  // ===== ТЕСТ 2: с сервера через Apple/Google Push =====
-  async function testServerPush() {
-    dbg('Прошу сервер прислать тестовый push…');
-    const url = '${SUPABASE_URL_PLACEHOLDER}/functions/v1/push-test'.replace(
-      '${SUPABASE_URL_PLACEHOLDER}', SUPABASE_URL
-    );
-    try {
-      const sess = (await sb.auth.getSession()).data?.session;
-      if (!sess) { dbg('Нет сессии'); return; }
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + sess.access_token,
-          'apikey':        SUPABASE_ANON,
-          'Content-Type':  'application/json',
-        },
-        body: '{}',
-      });
-      const data = await res.json();
-      dbg('Сервер ответил:', data);
-      if (data.sent > 0) {
-        dbg('Push отправлен в', data.sent, 'устройств. Если на телефоне нотификация не появляется — проблема на устройстве.');
-      } else if (data.failed > 0) {
-        dbg('Ошибка отправки. Смотрите details выше.');
-      } else if (data.total === 0) {
-        dbg('У вас нет подписок. Сначала включите уведомления.');
-      }
-    } catch (e) { dbg('fetch failed:', String(e)); }
+function renderMe(){
+  const ini=initials(state.me.full_name,state.me.email);
+  $('#user-avatar').textContent=ini; $('#menu-avatar').textContent=ini;
+  $('#menu-name').textContent=state.me.full_name||'—';
+  $('#menu-email').textContent=state.me.email;
+}
+
+async function loadTeams(){
+  const {data,error}=await sb.from('teams').select('*').order('is_personal',{ascending:false}).order('name');
+  if(error){console.error(error);toast('Ошибка загрузки команд','error');return;}
+  state.teams=data||[];
+  // если выбранной команды больше нет — вернуться на «Все»
+  if(state.currentTeam && !teamById(state.currentTeam)) state.currentTeam=null;
+}
+
+async function loadPeople(){
+  const {data,error}=await sb.from('users')
+    .select('id, full_name, email, avatar_url').order('full_name');
+  if(!error) state.allPeople=data||[];
+
+  const {data:tm}=await sb.from('team_members').select('team_id, user_id, role');
+  state.members={};
+  for(const m of (tm||[])){
+    (state.members[m.team_id] ||= []).push({...m, user: state.allPeople.find(u=>u.id===m.user_id)});
   }
+}
 
-  async function hardResetSubscription() {
-    dbg('Сброс подписки…');
-    try {
-      const reg = await getReg();
-      const sub = reg && await reg.pushManager.getSubscription();
-      if (sub) {
-        const ep = sub.endpoint;
-        try { await sub.unsubscribe(); } catch(_){}
-        await sb.from('push_subscriptions').delete().eq('endpoint', ep);
-        dbg('старая подписка удалена');
-      }
-      // Снимаем все регистрации SW
-      const regs = await navigator.serviceWorker.getRegistrations();
-      for (const r of regs) await r.unregister();
-      dbg('SW unregistered, регистрирую заново…');
-      // Чистим caches
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-      // Регаем заново и ждём активации
-      const newReg = await navigator.serviceWorker.register('./sw.js');
-      await navigator.serviceWorker.ready;
-      // Дадим SW момент перехватить страницу
-      await new Promise(r => setTimeout(r, 600));
-      const ok = await subscribeToPush();
-      if (ok) dbg('✅ Новая подписка создана. Перезагрузите страницу (Cmd+R) и попробуйте Тест 2.');
-      else dbg('❌ Не удалось создать подписку');
-    } catch (e) { dbg('hardReset failed:', String(e)); }
-    refreshPushButton();
-  }
+async function loadTemplates(){
+  const {data,error}=await sb.from('event_templates').select('*').order('name');
+  if(!error) state.templates=data||[];
+}
 
-  // ===== Обработчики =====
-  document.addEventListener('click', async (ev) => {
-    if (ev.target.closest('#btn-push') && !ev.target.closest('#btn-push').disabled) {
-      const s = ev.target.closest('#btn-push').dataset.pushState;
-      if (s === 'on') await unsubscribeFromPush();
-      else            await subscribeToPush();
-      await refreshPushButton(); return;
-    }
-    if (ev.target.closest('#btn-push-test-local'))  { await testLocalNotification(); return; }
-    if (ev.target.closest('#btn-push-test-server')) { await testServerPush();        return; }
-    if (ev.target.closest('#btn-push-reset'))       { await hardResetSubscription(); return; }
-  });
+async function loadBalance(){
+  const {data}=await sb.from('billing_accounts').select('balance_kopecks').maybeSingle();
+  state.balance=data?.balance_kopecks ?? 0;
+  $('#menu-balance').textContent=rub(state.balance);
+}
 
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', async (e) => {
-      const t = e.data && e.data.type;
-      if (t === 'sw_version') dbg('SW активен:', e.data.version);
-      if (t === 'push_log')   dbg('SW push handler:', e.data.ok ? '✅' : '❌', 'title=', e.data.title, e.data.error || '');
-      if (t === 'pushsubscriptionchange' && state.me) { await subscribeToPush(); await refreshPushButton(); }
+/* ============================================================
+   СЕЛЕКТОР КОМАНДЫ
+   ============================================================ */
+function renderTeamSelector(){
+  const host=$('#team-scroll'); host.innerHTML='';
+
+  const mk=(label,id,color,active)=>{
+    const b=document.createElement('button');
+    b.className='team-chip'+(active?' is-active':'');
+    b.innerHTML=`<span class="team-dot" style="background:${color}"></span><span>${escapeHtml(label)}</span>`;
+    b.addEventListener('click',async()=>{
+      state.currentTeam=id;
+      renderTeamSelector(); renderCalendar(); renderEventsList();
     });
-  }
-
-  // ===== STATE =====
-  const state = {
-    session: null,
-    me: null,
-    activeUsers: [],
-    currentMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    selectedDate: new Date(),
-    monthEvents: [], // события текущего отображаемого месяца
-    openedEventId: null,
-    editingEventId: null,
-    realtimeChannels: [],
-    routing: false,
-    swiping: false,
+    return b;
   };
 
-  // ===== UTILS =====
-  const $ = (sel, root=document) => root.querySelector(sel);
-  const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
-  const pad = n => String(n).padStart(2, '0');
-  const toDateInput = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  const fromDateInput = s => { const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); };
-  const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
-  const sameMonth = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth();
-
-  const ruMonths = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  const ruMonthsNom = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-  const ruWeekdays = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
-  const formatDateLong = d => `${d.getDate()} ${ruMonths[d.getMonth()]} ${d.getFullYear()} г.`;
-  const formatTime = t => t ? t.slice(0,5) : '';
-  const weekdayRu = d => ruWeekdays[d.getDay()];
-
-  function initials(name, email){
-    const src = (name || email || '?').trim();
-    const parts = src.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return src.slice(0,2).toUpperCase();
-  }
-  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-  function toast(msg, kind='info', ms=2500){
-    const el = document.createElement('div');
-    el.className = 'toast pointer-events-auto';
-    if (kind === 'error')   el.style.background = 'var(--error)';
-    if (kind === 'success') el.style.background = 'var(--success)';
-    el.textContent = msg;
-    $('#toasts').appendChild(el);
-    setTimeout(()=> el.remove(), ms);
-  }
-  function show(id){ $(`#${id}`).classList.remove('hidden'); $(`#${id}`).classList.add('flex'); }
-  function hide(id){ const el=$(`#${id}`); el.classList.add('hidden'); el.classList.remove('flex'); }
-  function open(id){ $(`#${id}`).classList.remove('hidden'); }
-  function close(id){ $(`#${id}`).classList.add('hidden'); }
-
-  document.addEventListener('click', e => {
-    const t = e.target.closest('[data-close]');
-    if (t) close(t.getAttribute('data-close'));
-  });
-
-  // ===== DESKTOP BANNER =====
-  function checkDesktop(){
-    const isDesktop = window.matchMedia('(min-width: 900px) and (pointer: fine)').matches;
-    const dismissed = sessionStorage.getItem('desktop_banner_dismissed');
-    if (isDesktop && !dismissed){
-      $('#desktop-banner').classList.remove('hidden');
-      $('#desktop-banner').classList.add('flex');
+  host.appendChild(mk('Все календари',null,'#0A0A0A',state.currentTeam===null));
+  for(const t of state.teams){
+    const label=t.is_personal?'Личный':t.name;
+    const chip=mk(label,t.id,teamColor(t.id),state.currentTeam===t.id);
+    if(t.status==='suspended'){
+      chip.style.opacity='.55';
+      chip.title='Команда приостановлена за неоплату';
     }
+    host.appendChild(chip);
   }
-  $('#banner-continue').addEventListener('click', () => {
-    sessionStorage.setItem('desktop_banner_dismissed','1');
-    hide('desktop-banner');
-  });
+}
 
-  // ===== AUTH =====
-  $('#btn-google').addEventListener('click', async () => {
-    $('#auth-error').classList.add('hidden');
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + window.location.pathname }
-    });
-    if (error) showAuthError(error.message);
-  });
-  function showAuthError(msg){ const el=$('#auth-error'); el.textContent=msg; el.classList.remove('hidden'); }
+// Мероприятия с учётом выбранного календаря
+const scopedEvents = () => state.currentTeam
+  ? state.events.filter(e=>e.team_id===state.currentTeam)
+  : state.events;
 
-  // ===== ROUTE =====
-  async function route(){
-    if (state.routing) return;
-    state.routing = true;
-    try { await routeInternal(); }
-    catch (e) {
-      console.error('[route] fatal:', e);
-      hide('app-screen'); hide('pending-screen');
-      show('auth-screen');
-      showAuthError('Ошибка инициализации: ' + (e.message || e));
-    } finally { state.routing = false; }
+/* ============================================================
+   КАЛЕНДАРЬ
+   ============================================================ */
+function renderCalendar(){
+  const first=new Date(state.currentMonth);
+  $('#month-label').textContent=`${ruMonthsNom[first.getMonth()]} ${first.getFullYear()}`;
+  const grid=$('#calendar-grid'); grid.innerHTML='';
+
+  const firstDow=(first.getDay()+6)%7;
+  const start=new Date(first); start.setDate(1-firstDow);
+  const today=new Date(), monthIdx=first.getMonth();
+
+  // по дням: набор команд, у которых есть события
+  const byDay=new Map();
+  for(const ev of scopedEvents()){
+    const set=byDay.get(ev.event_date)||new Set();
+    set.add(ev.team_id); byDay.set(ev.event_date,set);
   }
 
-  async function routeInternal(){
-    let session = null;
-    try { session = (await sb.auth.getSession()).data?.session || null; }
-    catch(e){ console.warn('getSession failed:', e); }
-    state.session = session;
+  for(let i=0;i<42;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const cell=document.createElement('div');
+    cell.className='cal-cell';
+    if(d.getMonth()!==monthIdx) cell.classList.add('is-other-month');
+    if(sameDay(d,today)) cell.classList.add('is-today');
+    const selected=sameDay(d,state.selectedDate);
+    if(selected) cell.classList.add('is-selected');
 
-    if (!session) {
-      hide('app-screen'); hide('pending-screen');
-      show('auth-screen');
-      return;
-    }
+    const num=document.createElement('div');
+    num.className='text-sm'; num.textContent=d.getDate();
+    cell.appendChild(num);
 
-    let me = null;
-    try {
-      const r = await sb.from('users').select('*').eq('id', session.user.id).maybeSingle();
-      if (r.error) {
-        const msg = (r.error.message||'').toLowerCase();
-        if (msg.includes('jwt') || msg.includes('invalid') || msg.includes('expired')) {
-          await sb.auth.signOut();
-          try { Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k)); } catch(_){}
-          hide('app-screen'); hide('pending-screen'); show('auth-screen'); return;
-        }
-        console.error(r.error);
-      }
-      me = r.data;
-    } catch(e){
-      await sb.auth.signOut();
-      try { Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k)); } catch(_){}
-      hide('app-screen'); hide('pending-screen'); show('auth-screen'); return;
-    }
-
-    if (!me) {
-      await new Promise(r => setTimeout(r, 800));
-      const r2 = await sb.from('users').select('*').eq('id', session.user.id).maybeSingle();
-      me = r2.data;
-      if (!me) { await sb.auth.signOut(); show('auth-screen'); showAuthError('Не удалось получить профиль.'); return; }
-    }
-    state.me = me;
-
-    if (state.me.status !== 'active') {
-      hide('auth-screen'); hide('app-screen'); show('pending-screen');
-      if (state.me.status === 'blocked') {
-        $('#pending-title').textContent = 'Учётная запись заблокирована';
-        $('#pending-text').textContent  = 'Доступ к приложению закрыт администратором.';
-      } else {
-        $('#pending-title').textContent = 'Ожидает подтверждения';
-        $('#pending-text').textContent  = 'Ваша учётная запись зарегистрирована. Доступ откроется после подтверждения администратором.';
-      }
-      return;
-    }
-
-    hide('auth-screen'); hide('pending-screen'); show('app-screen');
-    await bootApp();
-  }
-
-  $('#btn-refresh').addEventListener('click', () => route());
-  $('#btn-logout-pending').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
-
-  sb.auth.onAuthStateChange((event, session) => {
-    state.session = session;
-    if (event === 'SIGNED_OUT') unsubscribeRealtime();
-    if (event === 'SIGNED_IN' && session) {
-      const flagKey = 'login_logged_' + session.user.id;
-      if (!sessionStorage.getItem(flagKey)) {
-        sessionStorage.setItem(flagKey, '1');
-        setTimeout(() => {
-          sb.rpc('log_action', {
-            p_action_type: 'auth.login', p_entity_type: 'auth', p_entity_id: session.user.id,
-            p_details: { provider: session.user.app_metadata?.provider || 'google' }
-          }).catch(()=>{});
-        }, 500);
-      }
-    }
-  });
-
-  function maybeShowPWAHint() {
-    const ua = navigator.userAgent;
-    const isIOS = /iPad|iPhone|iPod/.test(ua);
-    const standalone = window.navigator.standalone === true ||
-                       window.matchMedia('(display-mode: standalone)').matches;
-    if (isIOS && !standalone && !sessionStorage.getItem('pwa_hint_shown')) {
-      sessionStorage.setItem('pwa_hint_shown', '1');
-      toast('Чтобы получать уведомления, добавьте приложение на главный экран: Поделиться → На экран «Домой»');
-    }
-  }
-
-  // ===== APP =====
-  async function bootApp(){
-    renderMe();
-    $('#btn-admin').classList.toggle('hidden', state.me.role !== 'admin');
-
-    // ↓ ДОБАВИТЬ
-    const debugVisible = state.me.role === 'admin';
-    ['#btn-push-test-local', '#btn-push-test-server', '#btn-push-reset', '#push-debug']
-      .forEach(sel => { const el = $(sel); if (el) el.classList.toggle('hidden', !debugVisible); });
-    
-    await loadActiveUsers();
-
-    state.selectedDate = new Date();
-    state.currentMonth = new Date(state.selectedDate.getFullYear(), state.selectedDate.getMonth(), 1);
-
-    await loadMonthEvents();
-    renderMonthLabel();
-    renderAllCalendarPages();
-    renderEventsList();
-    setupRealtime();
-    maybeShowPWAHint();
-
-    // ↓ ДОБАВИТЬ ЭТИ ДВЕ СТРОКИ
-    syncPushSubscription();
-    refreshPushButton();
-  }
-
-  function renderMe(){
-    $('#user-name').textContent = state.me.full_name || state.me.email;
-    $('#menu-name').textContent = state.me.full_name || '—';
-    $('#menu-email').textContent = state.me.email;
-    const ini = initials(state.me.full_name, state.me.email);
-    $('#user-avatar').textContent = ini;
-    $('#menu-avatar').textContent = ini;
-  }
-
-  async function loadActiveUsers(){
-    const { data, error } = await sb.from('users')
-      .select('id, full_name, email, avatar_url, role')
-      .eq('status','active')
-      .order('full_name', { ascending: true });
-    if (!error) state.activeUsers = data || [];
-  }
-
-  // ===== CALENDAR =====
-  function renderMonthLabel(){
-    const d = state.currentMonth;
-    $('#month-label').textContent = `${ruMonthsNom[d.getMonth()]} ${d.getFullYear()}`;
-  }
-
-  function renderCalendarPage(monthDate, hostGrid){
-    hostGrid.innerHTML = '';
-    const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-    const firstDow = (first.getDay() + 6) % 7;
-    const start = new Date(first); start.setDate(1 - firstDow);
-    const today = new Date();
-    const selDate = state.selectedDate;
-    const monthIdx = first.getMonth();
-
-    const byDay = new Map();
-    if (sameMonth(monthDate, state.currentMonth)) {
-      for (const ev of state.monthEvents) {
-        byDay.set(ev.event_date, (byDay.get(ev.event_date) || 0) + 1);
-      }
-    }
-
-    for (let i = 0; i < 42; i++) {
-      const d = new Date(start); d.setDate(start.getDate() + i);
-      const cell = document.createElement('div');
-      cell.className = 'cal-cell';
-      if (d.getMonth() !== monthIdx) cell.classList.add('is-other-month');
-      if (sameDay(d, today))   cell.classList.add('is-today');
-      if (sameDay(d, selDate)) cell.classList.add('is-selected');
-
-      const num = document.createElement('div');
-      num.className = 'text-sm';
-      num.textContent = d.getDate();
-      cell.appendChild(num);
-
-      const cnt = byDay.get(toDateInput(d)) || 0;
-      if (cnt > 0) {
-        const dots = document.createElement('div'); dots.className = 'cell-dots';
-        for (let k = 0; k < Math.min(cnt, 3); k++) {
-          const dot = document.createElement('div'); dot.className = 'cell-dot'; dots.appendChild(dot);
-        }
-        cell.appendChild(dots);
-      }
-
-      cell.addEventListener('click', () => {
-        if (state.swiping) return;
-        state.selectedDate = d;
-        // если клик на день из другого месяца — переместимся в его месяц
-        if (!sameMonth(d, state.currentMonth)) {
-          state.currentMonth = new Date(d.getFullYear(), d.getMonth(), 1);
-          (async () => {
-            await loadMonthEvents();
-            renderMonthLabel();
-            renderAllCalendarPages();
-            renderEventsList();
-          })();
-        } else {
-          renderAllCalendarPages();
-          renderEventsList();
-        }
-        updateSelectedDateLabel();
+    const set=byDay.get(toDateInput(d));
+    if(set&&set.size){
+      const dots=document.createElement('div'); dots.className='cell-dots';
+      [...set].slice(0,3).forEach(tid=>{
+        const dot=document.createElement('div'); dot.className='cell-dot';
+        dot.style.background = selected ? '#fff' : teamColor(tid);
+        dots.appendChild(dot);
       });
-      hostGrid.appendChild(cell);
-    }
-  }
-
-  function renderAllCalendarPages(){
-    const cur = state.currentMonth;
-    const prev = new Date(cur.getFullYear(), cur.getMonth() - 1, 1);
-    const next = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
-    renderCalendarPage(prev, $('#cal-page-prev .cal-grid'));
-    renderCalendarPage(cur,  $('#cal-page-curr .cal-grid'));
-    renderCalendarPage(next, $('#cal-page-next .cal-grid'));
-    // позиционируем трек на центральную страницу без анимации
-    const track = $('#cal-track');
-    track.style.transition = 'none';
-    track.style.transform = 'translateX(-100%)';
-    requestAnimationFrame(() => { track.style.transition = ''; });
-    updateSelectedDateLabel();
-  }
-
-  function updateSelectedDateLabel(){
-    $('#selected-date-label').textContent = formatDateLong(state.selectedDate);
-    $('#selected-date-sub').textContent = weekdayRu(state.selectedDate) + ' · выбран';
-  }
-
-  async function changeMonth(delta){
-    state.currentMonth = new Date(state.currentMonth.getFullYear(), state.currentMonth.getMonth() + delta, 1);
-    await loadMonthEvents();
-    renderMonthLabel();
-    renderAllCalendarPages();
-    renderEventsList();
-  }
-
-  $('#btn-prev-month').addEventListener('click', () => changeMonth(-1));
-  $('#btn-next-month').addEventListener('click', () => changeMonth(+1));
-
-  // ===== SWIPE для календаря =====
-  (function initSwipe(){
-    const viewport = $('#cal-viewport');
-    const track    = $('#cal-track');
-    let startX = 0, startY = 0, currentX = 0, dragging = false, axisLocked = null;
-    let viewportWidth = 0;
-
-    function onStart(e){
-      const p = pointFromEvent(e);
-      startX = p.x; startY = p.y; currentX = 0;
-      dragging = true; axisLocked = null;
-      viewportWidth = viewport.clientWidth;
-      track.style.transition = 'none';
-      state.swiping = false;
-    }
-    function onMove(e){
-      if (!dragging) return;
-      const p = pointFromEvent(e);
-      const dx = p.x - startX;
-      const dy = p.y - startY;
-      if (axisLocked === null) {
-        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-          axisLocked = (Math.abs(dx) > Math.abs(dy)) ? 'x' : 'y';
-        } else return;
-      }
-      if (axisLocked !== 'x') return;
-      e.preventDefault?.();
-      state.swiping = true;
-      currentX = dx;
-      track.style.transform = `translateX(calc(-100% + ${dx}px))`;
-    }
-    function onEnd(){
-      if (!dragging) return;
-      dragging = false;
-      track.style.transition = '';
-      const threshold = Math.max(60, viewportWidth * 0.18);
-      if (axisLocked === 'x' && Math.abs(currentX) > threshold) {
-        const direction = currentX < 0 ? +1 : -1;
-        track.style.transform = `translateX(${direction < 0 ? '0%' : '-200%'})`;
-        // По завершении анимации меняем месяц и сбрасываем трек на центр
-        setTimeout(async () => {
-          await changeMonth(direction);
-          state.swiping = false;
-        }, 360);
-      } else {
-        track.style.transform = 'translateX(-100%)';
-        setTimeout(() => { state.swiping = false; }, 100);
-      }
-    }
-    function pointFromEvent(e){
-      const t = e.touches?.[0] || e.changedTouches?.[0] || e;
-      return { x: t.clientX, y: t.clientY };
+      cell.appendChild(dots);
     }
 
-    // Pointer events с fallback на touch
-    viewport.addEventListener('pointerdown', onStart);
-    viewport.addEventListener('pointermove', onMove);
-    viewport.addEventListener('pointerup', onEnd);
-    viewport.addEventListener('pointercancel', onEnd);
-    viewport.addEventListener('pointerleave', e => { if (dragging) onEnd(e); });
-  })();
-
-  // ===== EVENTS: LOAD (мероприятия только текущего месяца) =====
-  async function loadMonthEvents(){
-    const first = new Date(state.currentMonth.getFullYear(), state.currentMonth.getMonth(), 1);
-    const next  = new Date(state.currentMonth.getFullYear(), state.currentMonth.getMonth() + 1, 1);
-    const { data, error } = await sb.from('events')
-      .select('*')
-      .gte('event_date', toDateInput(first))
-      .lt('event_date',  toDateInput(next))
-      .order('event_date', { ascending: true })
-      .order('time_start', { ascending: true });
-    if (error) { console.error(error); toast('Ошибка загрузки событий', 'error'); return; }
-    state.monthEvents = data || [];
-  }
-
-  // Считаем «прошедшим» событие, у которого время окончания < сейчас
-  function isPast(ev){
-    const end = new Date(`${ev.event_date}T${ev.time_end}`);
-    return end < new Date();
-  }
-
-  function renderEventsList(){
-    const events = [...state.monthEvents];
-    // Разделяем на актуальные и прошедшие
-    const upcoming = events.filter(e => !isPast(e))
-      .sort((a,b) => a.event_date.localeCompare(b.event_date) || a.time_start.localeCompare(b.time_start));
-    const past = events.filter(e => isPast(e))
-      .sort((a,b) => a.event_date.localeCompare(b.event_date) || a.time_start.localeCompare(b.time_start));
-
-    const list = $('#events-list');
-    list.innerHTML = '';
-    $('#events-count').textContent = events.length;
-    $('#events-empty').classList.toggle('hidden', events.length > 0);
-    $('#events-section-title').textContent = `Мероприятия · ${ruMonthsNom[state.currentMonth.getMonth()]}`;
-
-    const renderGroup = (arr, faded) => {
-      let curDate = null;
-      for (const ev of arr) {
-        if (ev.event_date !== curDate) {
-          curDate = ev.event_date;
-          const head = document.createElement('div');
-          head.className = 'text-[11px] uppercase tracking-widest pt-2';
-          head.style.color = 'var(--fg-muted)';
-          if (faded) head.style.opacity = '.55';
-          const d = fromDateInput(ev.event_date);
-          head.textContent = `${d.getDate()} ${ruMonths[d.getMonth()]} · ${weekdayRu(d)}`;
-          list.appendChild(head);
-        }
-        const resp = state.activeUsers.find(u => u.id === ev.responsible_id);
-        const card = document.createElement('div');
-        card.className = 'event-card flex items-center gap-3 cursor-pointer' + (faded ? ' is-past' : '');
-        card.innerHTML = `
-          <div class="event-stripe"></div>
-          <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium truncate">${escapeHtml(ev.title)}</div>
-            <div class="text-xs mt-0.5" style="color: var(--fg-muted);">
-              ${formatTime(ev.time_start)}–${formatTime(ev.time_end)}
-              ${resp ? ' · ' + escapeHtml(resp.full_name || resp.email) : ''}
-            </div>
-          </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--fg-muted); flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
-        `;
-        card.addEventListener('click', () => openEventView(ev.id));
-        list.appendChild(card);
-      }
-    };
-
-    renderGroup(upcoming, false);
-
-    if (past.length) {
-      const sep = document.createElement('div');
-      sep.className = 'text-[10px] uppercase tracking-widest pt-4 pb-1';
-      sep.style.color = 'var(--fg-muted)';
-      sep.textContent = '— Прошедшие —';
-      list.appendChild(sep);
-      renderGroup(past, true);
-    }
-  }
-
-  // ===== CREATE / EDIT EVENT =====
-  $('#btn-new-event').addEventListener('click', () => openEventForm(null));
-
-  function openEventForm(eventId){
-    state.editingEventId = eventId;
-    $('#event-modal-title').textContent = eventId ? 'Редактировать мероприятие' : 'Новое мероприятие';
-
-    const sel = $('#ef-responsible'); sel.innerHTML = '';
-    state.activeUsers.forEach(u => {
-      const opt = document.createElement('option');
-      opt.value = u.id; opt.textContent = u.full_name || u.email;
-      sel.appendChild(opt);
+    cell.addEventListener('click',()=>{
+      state.selectedDate=d; renderCalendar(); renderEventsList();
     });
-
-    if (eventId) {
-      const ev = state.monthEvents.find(e => e.id === eventId);
-      if (!ev) return;
-      $('#ef-title').value   = ev.title;
-      $('#ef-date').value    = ev.event_date;
-      $('#ef-start').value   = (ev.time_start || '').slice(0,5);
-      $('#ef-end').value     = (ev.time_end   || '').slice(0,5);
-      $('#ef-responsible').value = ev.responsible_id || state.me.id;
-      $('#ef-delete').classList.remove('hidden');
-    } else {
-      $('#ef-title').value = '';
-      $('#ef-date').value  = toDateInput(state.selectedDate);
-      $('#ef-start').value = '09:00';
-      $('#ef-end').value   = '10:00';
-      $('#ef-responsible').value = state.me.id;
-      $('#ef-delete').classList.add('hidden');
-    }
-    open('event-modal');
+    grid.appendChild(cell);
   }
+  updateSelectedDateLabel();
+}
 
-  $('#event-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const payload = {
-      title: $('#ef-title').value.trim(),
-      event_date: $('#ef-date').value,
-      time_start: $('#ef-start').value + ':00',
-      time_end:   $('#ef-end').value   + ':00',
-      responsible_id: $('#ef-responsible').value || state.me.id,
-    };
-    if (payload.time_end <= payload.time_start) { toast('Время окончания должно быть позже начала', 'error'); return; }
+function updateSelectedDateLabel(){
+  $('#selected-date-label').textContent=formatDateLong(state.selectedDate);
+  $('#selected-date-sub').textContent=weekdayRu(state.selectedDate)+' · выбран';
+}
 
-    if (state.editingEventId) {
-      const { error } = await sb.from('events').update(payload).eq('id', state.editingEventId);
-      if (error) { toast(error.message, 'error'); return; }
-      toast('Сохранено', 'success');
-    } else {
-      const { error } = await sb.from('events').insert({ ...payload, created_by: state.me.id });
-      if (error) { toast(error.message, 'error'); return; }
-      toast('Мероприятие создано', 'success');
+$('#btn-prev-month').addEventListener('click',async()=>{
+  state.currentMonth=new Date(state.currentMonth.getFullYear(),state.currentMonth.getMonth()-1,1);
+  await loadEvents(); renderCalendar();
+});
+$('#btn-next-month').addEventListener('click',async()=>{
+  state.currentMonth=new Date(state.currentMonth.getFullYear(),state.currentMonth.getMonth()+1,1);
+  await loadEvents(); renderCalendar();
+});
+$('#btn-today').addEventListener('click',async()=>{
+  state.selectedDate=new Date();
+  state.currentMonth=new Date(state.selectedDate.getFullYear(),state.selectedDate.getMonth(),1);
+  await loadEvents(); renderCalendar(); renderEventsList();
+});
+
+(function initSwipe(){
+  const wrap=$('#calendar-wrap');
+  let sx=0,sy=0,tracking=false;
+  wrap.addEventListener('pointerdown',e=>{tracking=true;sx=e.clientX;sy=e.clientY;});
+  wrap.addEventListener('pointerup',e=>{
+    if(!tracking)return; tracking=false;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.2)
+      (dx<0?$('#btn-next-month'):$('#btn-prev-month')).click();
+  });
+  wrap.addEventListener('pointercancel',()=>tracking=false);
+})();
+
+/* ============================================================
+   СОБЫТИЯ
+   ============================================================ */
+async function loadEvents(){
+  const first=new Date(state.currentMonth);
+  const firstDow=(first.getDay()+6)%7;
+  const from=new Date(first); from.setDate(1-firstDow);
+  const to=new Date(from); to.setDate(from.getDate()+42);
+  const listTo=new Date(); listTo.setMonth(listTo.getMonth()+6);
+  const upper=to>listTo?to:listTo;
+
+  const {data,error}=await sb.from('events').select('*')
+    .gte('event_date',toDateInput(from))
+    .lt('event_date',toDateInput(upper))
+    .order('event_date').order('time_start');
+  if(error){console.error(error);toast('Ошибка загрузки мероприятий','error');return;}
+  state.events=data||[];
+}
+
+function renderEventsList(){
+  const todayStr=toDateInput(new Date());
+  const upcoming=scopedEvents()
+    .filter(e=>e.event_date>=todayStr)
+    .sort((a,b)=>a.event_date.localeCompare(b.event_date)||a.time_start.localeCompare(b.time_start));
+
+  const list=$('#events-list'); list.innerHTML='';
+  $('#events-count').textContent=upcoming.length;
+  $('#events-empty').classList.toggle('hidden',upcoming.length>0);
+
+  let cur=null;
+  for(const ev of upcoming){
+    if(ev.event_date!==cur){
+      cur=ev.event_date;
+      const d=fromDateInput(ev.event_date);
+      const h=document.createElement('div');
+      h.className='text-[11px] uppercase tracking-widest pt-2';
+      h.style.color='var(--fg-muted)';
+      h.textContent=`${d.getDate()} ${ruMonths[d.getMonth()]} · ${weekdayRu(d)}`;
+      list.appendChild(h);
+    }
+    const resp=state.allPeople.find(u=>u.id===ev.responsible_id);
+    const t=teamById(ev.team_id);
+    const showTeam = state.currentTeam===null && t && !t.is_personal;
+
+    const card=document.createElement('div');
+    card.className='event-card flex items-center gap-3 cursor-pointer';
+    card.innerHTML=`
+      <div class="event-stripe" style="background:${teamColor(ev.team_id)}"></div>
+      <div class="flex-1 min-w-0">
+        ${showTeam?`<div class="text-[10px] font-medium mb-0.5" style="color:${teamColor(ev.team_id)}">${escapeHtml(t.name)}</div>`:''}
+        <div class="text-sm font-medium truncate">${escapeHtml(ev.title)}</div>
+        <div class="text-xs mt-0.5 truncate" style="color:var(--fg-muted);">
+          ${formatTime(ev.time_start)}–${formatTime(ev.time_end)}${resp?' · '+escapeHtml(resp.full_name||resp.email):''}${ev.location?' · '+escapeHtml(ev.location):''}
+        </div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--fg-muted);flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>`;
+    card.addEventListener('click',()=>openEventView(ev.id));
+    list.appendChild(card);
+  }
+}
+
+/* ============================================================
+   ФОРМА МЕРОПРИЯТИЯ
+   ============================================================ */
+$('#btn-new-event').addEventListener('click',()=>openEventForm(null));
+
+function writableTeams(){ return state.teams.filter(t=>t.status==='active'); }
+
+function fillTeamSelect(val){
+  const sel=$('#ef-team'); sel.innerHTML='';
+  for(const t of writableTeams()){
+    const o=document.createElement('option');
+    o.value=t.id; o.textContent=t.is_personal?'Личный календарь':t.name;
+    sel.appendChild(o);
+  }
+  sel.value = val || state.currentTeam || writableTeams()[0]?.id || '';
+}
+
+function fillResponsibleSelect(teamId,val){
+  const sel=$('#ef-responsible'); sel.innerHTML='';
+  const list=(state.members[teamId]||[]).map(m=>m.user).filter(Boolean);
+  const people = list.length?list:[state.me];
+  for(const u of people){
+    const o=document.createElement('option');
+    o.value=u.id; o.textContent=u.full_name||u.email;
+    sel.appendChild(o);
+  }
+  sel.value = (val && people.some(p=>p.id===val)) ? val : state.me.id;
+}
+
+function fillTemplateSelect(teamId){
+  const sel=$('#ef-template');
+  sel.innerHTML='<option value="">— без шаблона —</option>';
+  state.templates.filter(t=>t.team_id===teamId).forEach(t=>{
+    const o=document.createElement('option'); o.value=t.id; o.textContent=t.name;
+    sel.appendChild(o);
+  });
+}
+
+$('#ef-team').addEventListener('change',()=>{
+  const tid=$('#ef-team').value;
+  fillResponsibleSelect(tid,null);
+  fillTemplateSelect(tid);
+});
+
+$('#ef-template').addEventListener('change',()=>{
+  const t=state.templates.find(x=>x.id===$('#ef-template').value);
+  if(!t) return;
+  if(!$('#ef-title').value.trim()) $('#ef-title').value=t.title_pattern||'';
+  if(t.default_start) $('#ef-start').value=String(t.default_start).slice(0,5);
+  if(t.default_end)   $('#ef-end').value=String(t.default_end).slice(0,5);
+  if(t.location)      $('#ef-location').value=t.location;
+  if(t.notes)         $('#ef-notes').value=t.notes;
+});
+
+function openEventForm(eventId){
+  state.editingEventId=eventId;
+  $('#event-modal-title').textContent=eventId?'Редактировать мероприятие':'Новое мероприятие';
+  $('#ef-team-wrap').classList.toggle('hidden',!!eventId);
+  $('#ef-template-wrap').classList.toggle('hidden',!!eventId);
+  $('#ef-recurrence-wrap').classList.toggle('hidden',!!eventId);
+
+  if(eventId){
+    const ev=state.events.find(e=>e.id===eventId);
+    if(!ev) return;
+    $('#ef-title').value=ev.title;
+    $('#ef-date').value=ev.event_date;
+    $('#ef-start').value=formatTime(ev.time_start);
+    $('#ef-end').value=formatTime(ev.time_end);
+    $('#ef-location').value=ev.location||'';
+    $('#ef-notes').value=ev.notes||'';
+    fillResponsibleSelect(ev.team_id,ev.responsible_id);
+    $('#ef-delete').classList.remove('hidden');
+  }else{
+    if(!writableTeams().length){ toast('Нет доступных календарей','error'); return; }
+    fillTeamSelect(null);
+    const tid=$('#ef-team').value;
+    fillResponsibleSelect(tid,state.me.id);
+    fillTemplateSelect(tid);
+    $('#ef-template').value=''; $('#ef-title').value='';
+    $('#ef-date').value=toDateInput(state.selectedDate);
+    $('#ef-start').value='09:00'; $('#ef-end').value='11:00';
+    $('#ef-location').value=''; $('#ef-notes').value='';
+    $('#ef-freq').value='none'; $('#ef-count').value=1;
+    $('#ef-delete').classList.add('hidden');
+  }
+  open('event-modal');
+}
+
+$('#ef-freq').addEventListener('change',()=>{
+  const none=$('#ef-freq').value==='none';
+  $('#ef-count').disabled=none;
+  if(none) $('#ef-count').value=1;
+  else if(Number($('#ef-count').value)<2) $('#ef-count').value=4;
+});
+
+$('#event-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=$('#ef-submit'); btn.disabled=true;
+
+  const title=$('#ef-title').value.trim();
+  const date=$('#ef-date').value;
+  const t1=$('#ef-start').value+':00', t2=$('#ef-end').value+':00';
+  const resp=$('#ef-responsible').value||state.me.id;
+  const loc=$('#ef-location').value.trim()||null;
+  const notes=$('#ef-notes').value.trim()||null;
+
+  if(t2<=t1){toast('Время окончания должно быть позже начала','error');btn.disabled=false;return;}
+
+  try{
+    if(state.editingEventId){
+      const {error}=await sb.from('events').update({
+        title,event_date:date,time_start:t1,time_end:t2,
+        responsible_id:resp,location:loc,notes}).eq('id',state.editingEventId);
+      if(error) throw error;
+      toast('Сохранено','success');
+    }else{
+      const {data,error}=await sb.rpc('create_event_series',{
+        p_team_id:$('#ef-team').value,
+        p_title:title,p_start_date:date,p_time_start:t1,p_time_end:t2,
+        p_responsible_id:resp,p_freq:$('#ef-freq').value,
+        p_count:Number($('#ef-count').value)||1,
+        p_location:loc,p_notes:notes,
+        p_template_id:$('#ef-template').value||null});
+      if(error) throw error;
+      const sk=data?.skipped?.length||0;
+      toast(sk?`Создано: ${data.created}. Пропущено из-за пересечений: ${sk}`
+             :`Создано мероприятий: ${data.created}`,'success',4500);
     }
     close('event-modal');
-    await loadMonthEvents();
-    renderAllCalendarPages();
-    renderEventsList();
-  });
+    await loadEvents(); renderCalendar(); renderEventsList();
+  }catch(err){ toast(err.message||'Не удалось сохранить','error',6000); }
+  finally{ btn.disabled=false; }
+});
 
-  $('#ef-delete').addEventListener('click', async () => {
-    if (!state.editingEventId) return;
-    if (!confirm('Удалить мероприятие безвозвратно?')) return;
-    const { error } = await sb.from('events').delete().eq('id', state.editingEventId);
-    if (error) { toast(error.message, 'error'); return; }
-    close('event-modal'); close('event-view');
-    toast('Удалено', 'success');
-    await loadMonthEvents(); renderAllCalendarPages(); renderEventsList();
-  });
+$('#ef-delete').addEventListener('click',async()=>{
+  if(!state.editingEventId) return;
+  const ev=state.events.find(e=>e.id===state.editingEventId);
+  let ids=[state.editingEventId];
+  if(ev?.series_id){
+    const all=confirm('Мероприятие входит в серию.\n\nOK — удалить всю серию\nОтмена — только это');
+    if(all) ids=state.events.filter(e=>e.series_id===ev.series_id).map(e=>e.id);
+  }else if(!confirm('Удалить мероприятие безвозвратно?')) return;
 
-  // ===== EVENT VIEW =====
-  async function openEventView(eventId){
-    state.openedEventId = eventId;
-    const ev = state.monthEvents.find(e => e.id === eventId);
-    if (!ev) return;
-    const d = fromDateInput(ev.event_date);
-    $('#ev-date').textContent  = `${formatDateLong(d)} · ${weekdayRu(d)}`;
-    $('#ev-title').textContent = ev.title;
-    $('#ev-time').textContent  = `${formatTime(ev.time_start)} – ${formatTime(ev.time_end)}`;
-    const resp = state.activeUsers.find(u => u.id === ev.responsible_id);
-    if (resp) {
-      $('#ev-resp-avatar').textContent = initials(resp.full_name, resp.email);
-      $('#ev-resp-name').textContent = resp.full_name || resp.email;
-    } else { $('#ev-resp-avatar').textContent = '?'; $('#ev-resp-name').textContent = 'не назначен'; }
-    await reloadChecklists(eventId);
-    open('event-view');
-  }
-  $('#ev-edit').addEventListener('click', () => {
-    if (!state.openedEventId) return;
-    close('event-view'); openEventForm(state.openedEventId);
-  });
+  const {error}=await sb.from('events').delete().in('id',ids);
+  if(error){toast(error.message,'error');return;}
+  close('event-modal'); close('event-view');
+  toast(ids.length>1?`Удалено: ${ids.length}`:'Удалено','success');
+  await loadEvents(); renderCalendar(); renderEventsList();
+});
 
-  async function reloadChecklists(eventId){
-    const [m, a] = await Promise.all([
-      sb.from('event_materials').select('*').eq('event_id', eventId).order('order_index', { ascending: true }).order('created_at', { ascending: true }),
-      sb.from('event_actions'  ).select('*').eq('event_id', eventId).order('order_index', { ascending: true }).order('created_at', { ascending: true }),
-    ]);
-    renderChecklist('materials', m.data || []);
-    renderChecklist('actions',   a.data || []);
-  }
+/* ============================================================
+   ПРОСМОТР МЕРОПРИЯТИЯ
+   ============================================================ */
+async function openEventView(eventId){
+  state.openedEventId=eventId;
+  const ev=state.events.find(e=>e.id===eventId);
+  if(!ev) return;
 
-  function renderChecklist(kind, items){
-    const list = $(`#${kind}-list`);
-    $(`#${kind}-count`).textContent = `${items.filter(i=>i.is_done).length}/${items.length}`;
-    list.innerHTML = '';
-    for (const it of items) {
-      const row = document.createElement('div');
-      row.className = 'p-2 rounded-lg';
-      row.style.background = 'var(--bg-secondary)';
-      const main = document.createElement('div'); main.className = 'flex items-center gap-2';
-      const cb = document.createElement('input'); cb.type='checkbox'; cb.className='check'; cb.checked=it.is_done;
-      cb.addEventListener('change', async () => {
-        const rpc = kind === 'materials' ? 'toggle_material' : 'toggle_action';
-        const { error } = await sb.rpc(rpc, { p_id: it.id, p_done: cb.checked });
-        if (error) { toast(error.message, 'error'); cb.checked = !cb.checked; return; }
-        await reloadChecklists(state.openedEventId);
-      });
-      const ttl = document.createElement('div');
-      ttl.className = 'flex-1 text-sm';
-      ttl.style.textDecoration = it.is_done ? 'line-through' : 'none';
-      ttl.style.color = it.is_done ? 'var(--fg-muted)' : 'var(--fg)';
-      ttl.textContent = it.title;
-      const del = document.createElement('button');
-      del.innerHTML = '✕'; del.className = 'text-xs p-1'; del.style.color = 'var(--fg-muted)';
-      del.addEventListener('click', async () => {
-        if (!confirm('Удалить пункт?')) return;
-        const tbl = kind === 'materials' ? 'event_materials' : 'event_actions';
-        const { error } = await sb.from(tbl).delete().eq('id', it.id);
-        if (error) { toast(error.message, 'error'); return; }
-        await reloadChecklists(state.openedEventId);
-      });
-      main.append(cb, ttl, del);
-      row.appendChild(main);
+  const t=teamById(ev.team_id);
+  const teamEl=$('#ev-team');
+  teamEl.textContent = t ? (t.is_personal?'Личный календарь':t.name) : '';
+  teamEl.style.color = teamColor(ev.team_id);
 
-      if (it.is_done && it.done_by) {
-        const u = state.activeUsers.find(x => x.id === it.done_by);
-        const meta = document.createElement('div');
-        meta.className = 'flex items-center gap-1.5 mt-1 pl-7 text-[11px]';
-        meta.style.color = 'var(--fg-muted)';
-        meta.innerHTML = `
-          <span class="avatar-fallback w-4 h-4 text-[9px]" style="opacity:.7;">${escapeHtml(initials(u?.full_name, u?.email))}</span>
-          <span>отметил(а) ${escapeHtml(u?.full_name || u?.email || '—')}${it.done_at ? ' · ' + new Date(it.done_at).toLocaleString('ru-RU', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'}) : ''}</span>
-        `;
-        row.appendChild(meta);
-      }
-      list.appendChild(row);
-    }
-  }
+  const d=fromDateInput(ev.event_date);
+  $('#ev-date').textContent=`${formatDateLong(d)} · ${weekdayRu(d)}`;
+  $('#ev-title').textContent=ev.title;
+  $('#ev-time').textContent=`${formatTime(ev.time_start)} – ${formatTime(ev.time_end)}`;
 
-  async function addChecklistItem(kind){
-    const field = kind === 'materials' ? $('#new-material') : $('#new-action');
-    const val = field.value.trim();
-    if (!val) return;
-    const tbl = kind === 'materials' ? 'event_materials' : 'event_actions';
-    const { error } = await sb.from(tbl).insert({ event_id: state.openedEventId, title: val, created_by: state.me.id });
-    if (error) { toast(error.message, 'error'); return; }
-    field.value = ''; await reloadChecklists(state.openedEventId);
-  }
-  $('#btn-add-material').addEventListener('click', () => addChecklistItem('materials'));
-  $('#btn-add-action')  .addEventListener('click', () => addChecklistItem('actions'));
-  $('#new-material').addEventListener('keydown', e => { if (e.key==='Enter') addChecklistItem('materials'); });
-  $('#new-action').addEventListener('keydown',   e => { if (e.key==='Enter') addChecklistItem('actions'); });
+  const locEl=$('#ev-location');
+  locEl.classList.toggle('hidden',!ev.location);
+  if(ev.location) locEl.textContent='📍 '+ev.location;
 
-  // ===== USER MENU =====
-  $('#btn-user-menu').addEventListener('click', () => open('user-menu'));
-  $('#btn-logout').addEventListener('click', async () => {
-    sb.rpc('log_action', { p_action_type: 'auth.logout', p_entity_type: 'auth', p_entity_id: state.session?.user?.id || null }).catch(()=>{});
-    await sb.auth.signOut(); location.reload();
-  });
+  const nEl=$('#ev-notes');
+  nEl.classList.toggle('hidden',!ev.notes);
+  if(ev.notes) nEl.textContent=ev.notes;
 
-  // ===== ADMIN =====
-  $('#btn-admin').addEventListener('click', async () => {
-    setAdminTab('users'); open('admin-modal'); await loadAdminUsers();
-  });
-  $$('.admin-tab').forEach(b => b.addEventListener('click', async () => {
-    setAdminTab(b.dataset.adm);
-    if (b.dataset.adm === 'users') await loadAdminUsers(); else await loadAdminLogs();
-  }));
-  function setAdminTab(kind){
-    $$('.admin-tab').forEach(b => {
-      const active = b.dataset.adm === kind;
-      b.classList.toggle('bg-white', active);
-      b.style.boxShadow = active ? '0 1px 2px rgba(0,0,0,.05)' : '';
+  $('#ev-series').classList.toggle('hidden',!ev.series_id);
+
+  const resp=state.allPeople.find(u=>u.id===ev.responsible_id);
+  $('#ev-resp-avatar').textContent=resp?initials(resp.full_name,resp.email):'?';
+  $('#ev-resp-name').textContent=resp?(resp.full_name||resp.email):'не назначен';
+
+  await Promise.all([reloadChecklists(eventId),reloadAttachments(eventId)]);
+  open('event-view');
+}
+
+$('#ev-edit').addEventListener('click',()=>{
+  if(!state.openedEventId)return;
+  close('event-view'); openEventForm(state.openedEventId);
+});
+
+async function reloadChecklists(eventId){
+  const [m,a]=await Promise.all([
+    sb.from('event_materials').select('*').eq('event_id',eventId).order('order_index').order('created_at'),
+    sb.from('event_actions').select('*').eq('event_id',eventId).order('order_index').order('created_at')]);
+  renderChecklist('materials',m.data||[]);
+  renderChecklist('actions',a.data||[]);
+}
+
+function renderChecklist(kind,items){
+  const list=$(`#${kind}-list`);
+  $(`#${kind}-count`).textContent=`${items.filter(i=>i.is_done).length}/${items.length}`;
+  list.innerHTML='';
+  for(const it of items){
+    const row=document.createElement('div');
+    row.className='p-2 rounded-lg'; row.style.background='var(--bg-secondary)';
+    const line=document.createElement('div'); line.className='flex items-center gap-2';
+
+    const cb=document.createElement('input');
+    cb.type='checkbox'; cb.className='check'; cb.checked=it.is_done;
+    cb.addEventListener('change',async()=>{
+      cb.disabled=true;
+      const rpc=kind==='materials'?'toggle_material':'toggle_action';
+      const {error}=await sb.rpc(rpc,{p_id:it.id,p_done:cb.checked});
+      if(error){toast(error.message,'error');cb.checked=!cb.checked;}
+      cb.disabled=false;
+      await reloadChecklists(state.openedEventId);
     });
-    $('#adm-users').classList.toggle('hidden', kind !== 'users');
-    $('#adm-logs').classList.toggle('hidden',  kind !== 'logs');
+
+    const ttl=document.createElement('div');
+    ttl.className='flex-1 text-sm';
+    ttl.style.textDecoration=it.is_done?'line-through':'none';
+    ttl.style.color=it.is_done?'var(--fg-muted)':'var(--fg)';
+    ttl.textContent=it.title;
+
+    const del=document.createElement('button');
+    del.innerHTML='✕'; del.className='text-xs p-1'; del.style.color='var(--fg-muted)';
+    del.addEventListener('click',async()=>{
+      if(!confirm('Удалить пункт?'))return;
+      const tbl=kind==='materials'?'event_materials':'event_actions';
+      const {error}=await sb.from(tbl).delete().eq('id',it.id);
+      if(error){toast(error.message,'error');return;}
+      await reloadChecklists(state.openedEventId);
+    });
+
+    line.append(cb,ttl,del); row.appendChild(line);
+
+    if(it.is_done&&it.done_by){
+      const u=state.allPeople.find(x=>x.id===it.done_by);
+      const meta=document.createElement('div');
+      meta.className='flex items-center gap-1.5 mt-1 pl-7 text-[11px]';
+      meta.style.color='var(--fg-muted)';
+      const when=it.done_at?' · '+new Date(it.done_at).toLocaleString('ru-RU',
+        {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}):'';
+      meta.innerHTML=`<span class="avatar-fallback w-4 h-4 text-[9px]" style="opacity:.7;">${escapeHtml(initials(u?.full_name,u?.email))}</span>
+        <span>отметил(а) ${escapeHtml(u?.full_name||u?.email||'—')}${when}</span>`;
+      row.appendChild(meta);
+    }
+    list.appendChild(row);
   }
-  async function loadAdminUsers(){
-    const { data, error } = await sb.from('users').select('*').order('created_at', { ascending: false });
-    if (error) { toast(error.message, 'error'); return; }
-    const host = $('#adm-users'); host.innerHTML = '';
-    for (const u of data) {
-      const row = document.createElement('div');
-      row.className = 'flex items-center gap-3 p-3 rounded-xl';
-      row.style.border = '1px solid var(--border)';
-      row.innerHTML = `
-        <span class="avatar-fallback w-9 h-9 text-xs flex-shrink-0">${escapeHtml(initials(u.full_name, u.email))}</span>
+}
+
+async function addChecklistItem(kind){
+  const f=kind==='materials'?$('#new-material'):$('#new-action');
+  const v=f.value.trim(); if(!v)return;
+  const tbl=kind==='materials'?'event_materials':'event_actions';
+  const {error}=await sb.from(tbl).insert({event_id:state.openedEventId,title:v,created_by:state.me.id});
+  if(error){toast(error.message,'error');return;}
+  f.value=''; await reloadChecklists(state.openedEventId);
+}
+$('#btn-add-material').addEventListener('click',()=>addChecklistItem('materials'));
+$('#btn-add-action').addEventListener('click',()=>addChecklistItem('actions'));
+$('#new-material').addEventListener('keydown',e=>{if(e.key==='Enter')addChecklistItem('materials');});
+$('#new-action').addEventListener('keydown',e=>{if(e.key==='Enter')addChecklistItem('actions');});
+
+/* ============================================================
+   ВЛОЖЕНИЯ
+   ============================================================ */
+async function reloadAttachments(eventId){
+  const {data,error}=await sb.from('event_attachments').select('*')
+    .eq('event_id',eventId).order('created_at');
+  const host=$('#attach-list'); host.innerHTML='';
+  if(error){console.error(error);return;}
+  const items=data||[];
+  $('#attach-count').textContent=items.length;
+
+  for(const at of items){
+    const wrap=document.createElement('div'); wrap.className='relative';
+    const {data:signed}=await sb.storage.from('event-attachments').createSignedUrl(at.storage_path,3600);
+    if((at.mime_type||'').startsWith('image/')&&signed?.signedUrl){
+      const img=document.createElement('img');
+      img.src=signed.signedUrl; img.className='attach-thumb'; img.alt=at.file_name;
+      img.addEventListener('click',()=>window.open(signed.signedUrl,'_blank'));
+      wrap.appendChild(img);
+    }else{
+      const box=document.createElement('div');
+      box.className='attach-thumb flex items-center justify-center text-[10px] p-1 text-center cursor-pointer';
+      box.style.color='var(--fg-muted)'; box.textContent=at.file_name.slice(0,18);
+      if(signed?.signedUrl) box.addEventListener('click',()=>window.open(signed.signedUrl,'_blank'));
+      wrap.appendChild(box);
+    }
+    const rm=document.createElement('button');
+    rm.textContent='✕';
+    rm.className='absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] flex items-center justify-center';
+    rm.style.cssText='background:var(--fg);color:#fff;';
+    rm.addEventListener('click',async()=>{
+      if(!confirm('Удалить файл?'))return;
+      await sb.storage.from('event-attachments').remove([at.storage_path]);
+      await sb.from('event_attachments').delete().eq('id',at.id);
+      await reloadAttachments(eventId);
+    });
+    wrap.appendChild(rm); host.appendChild(wrap);
+  }
+}
+
+$('#attach-input').addEventListener('change',async e=>{
+  const file=e.target.files?.[0];
+  if(!file||!state.openedEventId)return;
+  if(file.size>10*1024*1024){toast('Файл больше 10 МБ','error');e.target.value='';return;}
+  toast('Загрузка…');
+  const safe=file.name.replace(/[^\w.\-]/g,'_');
+  const path=`${state.openedEventId}/${crypto.randomUUID()}-${safe}`;
+  const {error:upErr}=await sb.storage.from('event-attachments')
+    .upload(path,file,{contentType:file.type,upsert:false});
+  if(upErr){toast(upErr.message,'error');e.target.value='';return;}
+  const {error:insErr}=await sb.from('event_attachments').insert({
+    event_id:state.openedEventId,storage_path:path,file_name:file.name,
+    mime_type:file.type,size_bytes:file.size,uploaded_by:state.me.id});
+  if(insErr){toast(insErr.message,'error');e.target.value='';return;}
+  e.target.value=''; toast('Файл прикреплён','success');
+  await reloadAttachments(state.openedEventId);
+});
+
+/* ============================================================
+   ШАБЛОНЫ
+   ============================================================ */
+$('#ev-save-template').addEventListener('click',async()=>{
+  const name=prompt('Название шаблона:');
+  if(!name?.trim())return;
+  const {error}=await sb.rpc('save_as_template',{p_event_id:state.openedEventId,p_name:name.trim()});
+  if(error){toast(error.message,'error');return;}
+  await loadTemplates(); toast('Шаблон сохранён','success');
+});
+
+$('#btn-templates').addEventListener('click',async()=>{
+  close('user-menu'); await loadTemplates(); renderTemplates(); open('templates-modal');
+});
+
+async function renderTemplates(){
+  const host=$('#templates-list'); host.innerHTML='';
+  if(!state.templates.length){
+    host.innerHTML=`<div class="text-center py-8 text-sm" style="color:var(--fg-muted);">
+      Шаблонов пока нет. Откройте мероприятие и нажмите «Сохранить как шаблон».</div>`;
+    return;
+  }
+  for(const t of state.templates){
+    const {count}=await sb.from('event_template_items')
+      .select('*',{count:'exact',head:true}).eq('template_id',t.id);
+    const row=document.createElement('div');
+    row.className='p-3 rounded-xl'; row.style.border='1px solid var(--border)';
+    row.innerHTML=`
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <div class="text-[10px] font-medium" style="color:${teamColor(t.team_id)}">${escapeHtml(teamName(t.team_id))}</div>
+          <div class="text-sm font-medium truncate">${escapeHtml(t.name)}</div>
+          <div class="text-xs mt-0.5" style="color:var(--fg-muted);">Пунктов: ${count||0}</div>
+        </div>
+        <button data-tpl-del="${t.id}" class="text-xs p-1" style="color:var(--error);">Удалить</button>
+      </div>`;
+    host.appendChild(row);
+  }
+  host.querySelectorAll('[data-tpl-del]').forEach(b=>{
+    b.addEventListener('click',async()=>{
+      if(!confirm('Удалить шаблон?'))return;
+      const {error}=await sb.from('event_templates').delete().eq('id',b.dataset.tplDel);
+      if(error){toast(error.message,'error');return;}
+      await loadTemplates(); renderTemplates(); toast('Шаблон удалён','success');
+    });
+  });
+}
+
+/* ============================================================
+   КОМАНДЫ
+   ============================================================ */
+$('#btn-teams').addEventListener('click',async()=>{
+  await loadTeams(); await loadPeople(); renderTeamsList(); open('teams-modal');
+});
+
+function renderTeamsList(){
+  const host=$('#teams-list'); host.innerHTML='';
+  for(const t of state.teams){
+    const members=(state.members[t.id]||[]).length;
+    const isOwner=t.owner_id===state.me.id;
+    const row=document.createElement('div');
+    row.className='p-3 rounded-xl cursor-pointer';
+    row.style.border='1px solid var(--border)';
+    row.innerHTML=`
+      <div class="flex items-center gap-3">
+        <span class="team-dot" style="background:${teamColor(t.id)};width:10px;height:10px;"></span>
         <div class="flex-1 min-w-0">
-          <div class="text-sm font-medium truncate">${escapeHtml(u.full_name || '—')}</div>
-          <div class="text-xs truncate" style="color: var(--fg-muted);">${escapeHtml(u.email)}</div>
-          <div class="mt-1 flex gap-1.5 flex-wrap">
-            <span class="badge ${u.role==='admin'?'badge-info':'badge-muted'}">${u.role}</span>
-            <span class="badge ${u.status==='active'?'badge-success':u.status==='pending'?'badge-warning':'badge-error'}">${u.status}</span>
+          <div class="text-sm font-medium truncate">${escapeHtml(t.is_personal?'Личный календарь':t.name)}</div>
+          <div class="text-xs mt-0.5" style="color:var(--fg-muted);">
+            ${t.is_personal?'бесплатно':`${members} участн. · ${rub(members*10000)}/мес`}
           </div>
         </div>
-        <div class="flex flex-col gap-1 flex-shrink-0">
-          ${u.id === state.me.id ? '<span class="text-[10px]" style="color: var(--fg-muted);">это вы</span>' : `
-            <select data-action="status" data-uid="${u.id}" class="field text-xs" style="padding:6px 8px;">
-              <option value="pending"  ${u.status==='pending'?'selected':''}>pending</option>
-              <option value="active"   ${u.status==='active'?'selected':''}>active</option>
-              <option value="blocked"  ${u.status==='blocked'?'selected':''}>blocked</option>
-            </select>
-          `}
-        </div>`;
-      host.appendChild(row);
-    }
-    host.querySelectorAll('[data-action="status"]').forEach(sel => {
-      sel.addEventListener('change', async () => {
-        const { error } = await sb.from('users').update({ status: sel.value }).eq('id', sel.dataset.uid);
-        if (error) { toast(error.message, 'error'); return; }
-        toast('Статус обновлён','success'); await loadAdminUsers(); await loadActiveUsers();
-      });
-    });
-  }
-  async function loadAdminLogs(){
-    const { data, error } = await sb.from('action_logs').select('*').order('created_at', { ascending: false }).limit(200);
-    if (error) { toast(error.message, 'error'); return; }
-    const host = $('#adm-logs'); host.innerHTML = '';
-    for (const l of data) {
-      const when = new Date(l.created_at).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-      const row = document.createElement('div');
-      row.className = 'p-2.5 rounded-lg text-xs';
-      row.style.background = 'var(--bg-secondary)';
-      row.innerHTML = `
-        <div class="flex items-center justify-between gap-2">
-          <div class="font-medium">${escapeHtml(l.action_type)}</div>
-          <div style="color: var(--fg-muted);">${when}</div>
+        <div class="flex flex-col items-end gap-1">
+          ${isOwner&&!t.is_personal?'<span class="badge badge-info">владелец</span>':''}
+          ${t.status==='suspended'?'<span class="badge badge-error">приостановлена</span>':''}
         </div>
-        <div class="mt-0.5" style="color: var(--fg-secondary);">${escapeHtml(l.user_email || '—')}</div>
-        ${l.details && Object.keys(l.details).length ? `<pre class="mt-1 text-[11px] whitespace-pre-wrap" style="color: var(--fg-muted);">${escapeHtml(JSON.stringify(l.details, null, 0))}</pre>` : ''}
-      `;
-      host.appendChild(row);
-    }
+      </div>`;
+    row.addEventListener('click',()=>openTeamDetail(t.id));
+    host.appendChild(row);
+  }
+}
+
+async function openTeamDetail(teamId){
+  state.openedTeamId=teamId;
+  const t=teamById(teamId); if(!t)return;
+  close('teams-modal');
+
+  $('#td-name').textContent=t.is_personal?'Личный календарь':t.name;
+
+  const {data:info}=await sb.rpc('team_billing_info',{p_team:teamId});
+  const bill=$('#td-billing');
+  if(t.is_personal){
+    bill.innerHTML=`<div class="text-sm">Личный календарь — <b>бесплатно</b>, без ограничений.</div>`;
+  }else{
+    const trial=info?.trial_ends_at?new Date(info.trial_ends_at):null;
+    const inTrial=trial&&trial>new Date();
+    const next=info?.next_charge_at?new Date(info.next_charge_at):null;
+    bill.innerHTML=`
+      <div class="flex justify-between text-sm"><span>Участников</span><b>${info?.members??0}</b></div>
+      <div class="flex justify-between text-sm mt-1"><span>Тариф</span><span>${rub(info?.price_per_member??10000)} / чел. / мес</span></div>
+      <div class="flex justify-between text-sm mt-1"><span>Итого в месяц</span><b>${rub(info?.monthly_total??0)}</b></div>
+      <div class="flex justify-between text-sm mt-1">
+        <span>${inTrial?'Бесплатный период до':'Следующее списание'}</span>
+        <span>${(inTrial?trial:next)?.toLocaleDateString('ru-RU')??'—'}</span>
+      </div>
+      ${inTrial?'<div class="badge badge-success mt-2">первый месяц бесплатно</div>':''}
+      ${t.status==='suspended'?'<div class="badge badge-error mt-2">приостановлена за неоплату</div>':''}`;
   }
 
-  // ===== REALTIME =====
-  function setupRealtime(){
-    unsubscribeRealtime();
-    const ch = sb.channel('rt-events')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, async () => {
-        await loadMonthEvents(); renderAllCalendarPages(); renderEventsList();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_materials' }, async () => {
-        if (state.openedEventId) await reloadChecklists(state.openedEventId);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_actions' }, async () => {
-        if (state.openedEventId) await reloadChecklists(state.openedEventId);
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, async (payload) => {
-        if (payload.new?.id === state.me?.id) {
-          state.me = payload.new;
-          if (state.me.status !== 'active') return route();
-          renderMe();
-        }
-        await loadActiveUsers();
-      })
-      .subscribe();
-    state.realtimeChannels.push(ch);
+  const host=$('#td-members'); host.innerHTML='';
+  const isOwner=t.owner_id===state.me.id;
+  for(const m of (state.members[teamId]||[])){
+    const u=m.user; if(!u)continue;
+    const row=document.createElement('div');
+    row.className='flex items-center gap-2 p-2 rounded-lg';
+    row.style.background='var(--bg-secondary)';
+    row.innerHTML=`
+      <span class="avatar-fallback w-7 h-7 text-[10px]">${escapeHtml(initials(u.full_name,u.email))}</span>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm truncate">${escapeHtml(u.full_name||u.email)}</div>
+        <div class="text-[11px] truncate" style="color:var(--fg-muted);">${escapeHtml(u.email)}</div>
+      </div>
+      ${m.role==='owner'?'<span class="badge badge-info">владелец</span>':
+        (isOwner?`<button data-kick="${u.id}" class="text-xs p-1" style="color:var(--error);">Убрать</button>`:'')}`;
+    host.appendChild(row);
   }
-  function unsubscribeRealtime(){
-    for (const ch of state.realtimeChannels) sb.removeChannel(ch);
-    state.realtimeChannels = [];
-  }
+  host.querySelectorAll('[data-kick]').forEach(b=>{
+    b.addEventListener('click',async()=>{
+      if(!confirm('Убрать участника из команды?'))return;
+      const {error}=await sb.from('team_members').delete()
+        .eq('team_id',teamId).eq('user_id',b.dataset.kick);
+      if(error){toast(error.message,'error');return;}
+      await loadPeople(); openTeamDetail(teamId); toast('Участник удалён','success');
+    });
+  });
 
-  // ===== INIT =====
-  (async function init(){
-    checkDesktop();
-    if ('serviceWorker' in navigator) {
-      try {
-        const reg = await navigator.serviceWorker.register('./sw.js');
-        await navigator.serviceWorker.ready;
-        // Запросим у активного SW его версию
-        if (navigator.serviceWorker.controller) {
-          navigator.serviceWorker.controller.postMessage({ type: 'get_version' });
-        }
-      } catch(e) { console.warn('SW reg failed', e); }
-    }
-    await route();
-  })();
+  $('#td-owner-tools').classList.toggle('hidden',!isOwner||t.is_personal);
+  $('#btn-leave-team').classList.toggle('hidden',isOwner||t.is_personal);
+  $('#invite-result').classList.add('hidden');
+  open('team-detail');
+}
+
+$('#btn-create-team').addEventListener('click',async()=>{
+  const name=$('#new-team-name').value.trim();
+  if(!name){toast('Укажите название','error');return;}
+  const {error}=await sb.rpc('create_team',{p_name:name});
+  if(error){toast(error.message,'error');return;}
+  $('#new-team-name').value='';
+  await loadTeams(); await loadPeople();
+  renderTeamsList(); renderTeamSelector();
+  toast('Команда создана. Первый месяц бесплатно.','success',4500);
+});
+
+$('#btn-accept-invite').addEventListener('click',async()=>{
+  const code=$('#invite-code-input').value.trim();
+  if(!code){toast('Введите код','error');return;}
+  const {data,error}=await sb.rpc('accept_invite',{p_code:code});
+  if(error){toast(error.message,'error',5000);return;}
+  $('#invite-code-input').value='';
+  await loadTeams(); await loadPeople(); await loadEvents();
+  renderTeamsList(); renderTeamSelector(); renderCalendar(); renderEventsList();
+  toast(`Вы в команде «${data.team_name}»`,'success',4500);
+});
+
+$('#btn-invite').addEventListener('click',async()=>{
+  const {data,error}=await sb.rpc('create_invite',{p_team:state.openedTeamId,p_email:null});
+  if(error){toast(error.message,'error');return;}
+  $('#invite-code').textContent=data;
+  $('#invite-result').classList.remove('hidden');
+});
+
+$('#btn-copy-code').addEventListener('click',async()=>{
+  const code=$('#invite-code').textContent;
+  try{ await navigator.clipboard.writeText(code); toast('Код скопирован','success'); }
+  catch{ toast('Скопируйте вручную: '+code); }
+});
+
+$('#btn-rename-team').addEventListener('click',async()=>{
+  const t=teamById(state.openedTeamId);
+  const name=prompt('Новое название команды:',t?.name||'');
+  if(!name?.trim())return;
+  const {error}=await sb.from('teams').update({name:name.trim()}).eq('id',state.openedTeamId);
+  if(error){toast(error.message,'error');return;}
+  await loadTeams(); renderTeamSelector(); openTeamDetail(state.openedTeamId);
+  toast('Переименовано','success');
+});
+
+$('#btn-delete-team').addEventListener('click',async()=>{
+  if(!confirm('Удалить команду вместе со всеми её мероприятиями? Действие необратимо.'))return;
+  const {error}=await sb.from('teams').delete().eq('id',state.openedTeamId);
+  if(error){toast(error.message,'error');return;}
+  close('team-detail');
+  state.currentTeam=null;
+  await loadTeams(); await loadPeople(); await loadEvents();
+  renderTeamSelector(); renderCalendar(); renderEventsList();
+  toast('Команда удалена','success');
+});
+
+$('#btn-leave-team').addEventListener('click',async()=>{
+  if(!confirm('Покинуть команду?'))return;
+  const {error}=await sb.rpc('leave_team',{p_team:state.openedTeamId});
+  if(error){toast(error.message,'error');return;}
+  close('team-detail');
+  state.currentTeam=null;
+  await loadTeams(); await loadPeople(); await loadEvents();
+  renderTeamSelector(); renderCalendar(); renderEventsList();
+  toast('Вы покинули команду','success');
+});
+
+/* ============================================================
+   БИЛЛИНГ
+   ============================================================ */
+$('#btn-billing').addEventListener('click',async()=>{
+  close('user-menu'); await loadBalance();
+  $('#billing-balance').textContent=rub(state.balance);
+
+  const owned=state.teams.filter(t=>!t.is_personal&&t.owner_id===state.me.id);
+  const monthly=owned.reduce((s,t)=>s+((state.members[t.id]||[]).length*10000),0);
+  $('#billing-monthly').textContent = owned.length
+    ? `Ежемесячно за ${owned.length} ${owned.length===1?'команду':'команды'}: ${rub(monthly)}`
+    : 'Платных команд нет';
+
+  const {data}=await sb.from('billing_transactions').select('*')
+    .order('created_at',{ascending:false}).limit(50);
+  const host=$('#billing-tx'); host.innerHTML='';
+  if(!data?.length){
+    host.innerHTML='<div class="text-xs text-center py-4" style="color:var(--fg-muted);">Операций пока не было</div>';
+  }
+  for(const tx of (data||[])){
+    const when=new Date(tx.created_at).toLocaleString('ru-RU',
+      {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const pos=tx.amount_kopecks>0;
+    const row=document.createElement('div');
+    row.className='flex justify-between items-center text-xs py-2';
+    row.style.borderBottom='1px solid var(--border-light)';
+    row.innerHTML=`
+      <div class="min-w-0">
+        <div class="truncate">${escapeHtml(tx.description||tx.kind)}</div>
+        <div style="color:var(--fg-muted);">${when}</div>
+      </div>
+      <div style="color:${pos?'var(--success)':'var(--fg)'};font-weight:500;white-space:nowrap;">
+        ${pos?'+':''}${rub(tx.amount_kopecks)}
+      </div>`;
+    host.appendChild(row);
+  }
+  open('billing-modal');
+});
+
+/* ---------- Пополнение баланса ---------- */
+$$('.topup-preset').forEach(b=>{
+  b.addEventListener('click',()=>{
+    $('#topup-amount').value = Number(b.dataset.sum)/100;
+    startTopup(Number(b.dataset.sum));
+  });
+});
+
+$('#btn-topup').addEventListener('click',()=>{
+  const rubles=Number($('#topup-amount').value);
+  if(!rubles||rubles<100){toast('Минимальная сумма — 100 ₽','error');return;}
+  startTopup(Math.round(rubles*100));
+});
+
+async function startTopup(kopecks){
+  const btn=$('#btn-topup'); btn.disabled=true;
+  $('#topup-hint').textContent='Создаём платёж…';
+  try{
+    const {data,error}=await sb.functions.invoke('payment-create',{
+      body:{ amount_kopecks: kopecks }
+    });
+    if(error) throw new Error(data?.error||error.message);
+    if(data?.error) throw new Error(data.error);
+    if(!data?.confirmation_url) throw new Error('Платёжный провайдер не вернул ссылку');
+    // Отметка, чтобы после возврата дождаться зачисления
+    sessionStorage.setItem('awaiting_payment', String(kopecks));
+    window.location.href=data.confirmation_url;
+  }catch(err){
+    toast(err.message||'Не удалось создать платёж','error',6000);
+    $('#topup-hint').textContent='Оплата картой через ЮKassa. Средства зачисляются автоматически.';
+  }finally{ btn.disabled=false; }
+}
+
+/* ---------- Передача владения ---------- */
+$('#btn-transfer-team').addEventListener('click',async()=>{
+  const teamId=state.openedTeamId;
+  const candidates=(state.members[teamId]||[])
+    .filter(m=>m.user_id!==state.me.id).map(m=>m.user).filter(Boolean);
+
+  if(!candidates.length){toast('В команде нет других участников','error');return;}
+
+  const list=candidates.map((u,i)=>`${i+1}. ${u.full_name||u.email}`).join('\n');
+  const pick=prompt(`Кому передать владение командой?\nПосле передачи списания пойдут с его баланса.\n\n${list}\n\nВведите номер:`);
+  if(!pick) return;
+
+  const idx=Number(pick)-1;
+  if(!(idx>=0&&idx<candidates.length)){toast('Некорректный номер','error');return;}
+  const target=candidates[idx];
+
+  if(!confirm(`Передать владение пользователю ${target.full_name||target.email}?\nВы останетесь участником, но платить будет он.`)) return;
+
+  const {error}=await sb.rpc('transfer_team_ownership',{p_team:teamId,p_new_owner:target.id});
+  if(error){toast(error.message,'error',6000);return;}
+  await loadTeams(); await loadPeople();
+  close('team-detail'); renderTeamsList(); renderTeamSelector();
+  toast('Владение передано','success');
+});
+
+/* ============================================================
+   ЭКСПОРТ .ICS
+   ============================================================ */
+const icsEscape=s=>String(s||'').replace(/[\\;,]/g,m=>'\\'+m).replace(/\n/g,'\\n');
+const icsStamp=(d,t)=>d.replace(/-/g,'')+'T'+String(t).slice(0,8).replace(/:/g,'');
+
+function downloadICS(events,filename){
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Events Calendar//RU','CALSCALE:GREGORIAN'];
+  for(const ev of events){
+    const resp=state.allPeople.find(u=>u.id===ev.responsible_id);
+    lines.push('BEGIN:VEVENT',
+      `UID:${ev.id}@events-calendar`,
+      `DTSTAMP:${icsStamp(toDateInput(new Date()),'000000')}Z`,
+      `DTSTART:${icsStamp(ev.event_date,ev.time_start)}`,
+      `DTEND:${icsStamp(ev.event_date,ev.time_end)}`,
+      `SUMMARY:${icsEscape(ev.title)}`);
+    if(ev.location) lines.push(`LOCATION:${icsEscape(ev.location)}`);
+    const desc=[teamName(ev.team_id),ev.notes,
+      resp?'Ответственный: '+(resp.full_name||resp.email):''].filter(Boolean).join('\n');
+    if(desc) lines.push(`DESCRIPTION:${icsEscape(desc)}`);
+    lines.push('END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  const blob=new Blob([lines.join('\r\n')],{type:'text/calendar;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+
+$('#btn-ical').addEventListener('click',()=>{
+  const todayStr=toDateInput(new Date());
+  const up=scopedEvents().filter(e=>e.event_date>=todayStr);
+  if(!up.length){toast('Нет мероприятий для экспорта');return;}
+  downloadICS(up,'events-calendar.ics'); toast('Файл выгружен','success');
+});
+$('#ev-ics').addEventListener('click',()=>{
+  const ev=state.events.find(e=>e.id===state.openedEventId);
+  if(ev) downloadICS([ev],`event-${ev.event_date}.ics`);
+});
+
+/* ============================================================
+   PUSH
+   ============================================================ */
+function urlBase64ToUint8Array(b64s){
+  const padding='='.repeat((4-b64s.length%4)%4);
+  const b64=(b64s+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(b64); const arr=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i);
+  return arr;
+}
+const vapidConfigured=()=>VAPID_PUBLIC_KEY&&!VAPID_PUBLIC_KEY.startsWith('ВСТАВЬ_');
+
+async function currentSubscription(){
+  if(!('serviceWorker'in navigator)||!('PushManager'in window))return null;
+  const reg=await navigator.serviceWorker.getRegistration();
+  return reg ? await reg.pushManager.getSubscription() : null;
+}
+
+async function refreshPushUI(){
+  const tg=$('#push-toggle'), hint=$('#push-hint');
+  if(!('serviceWorker'in navigator)||!('PushManager'in window)){
+    tg.disabled=true;tg.checked=false;hint.textContent='Браузер не поддерживает push';return;
+  }
+  if(isIOS()&&!isStandalone()){
+    tg.disabled=true;tg.checked=false;
+    hint.textContent='На iPhone: «Поделиться» → «На экран Домой», затем включите здесь';return;
+  }
+  if(!vapidConfigured()){
+    tg.disabled=true;tg.checked=false;hint.textContent='Не задан VAPID_PUBLIC_KEY в index.html';return;
+  }
+  if(Notification.permission==='denied'){
+    tg.disabled=true;tg.checked=false;hint.textContent='Уведомления запрещены в настройках браузера';return;
+  }
+  const sub=await currentSubscription();
+  tg.disabled=false; tg.checked=!!sub;
+  hint.textContent=sub?'Включены на этом устройстве':'Выключены';
+}
+
+$('#push-toggle').addEventListener('change',async e=>{
+  e.target.disabled=true;
+  try{ e.target.checked ? await enablePush() : await disablePush(); }
+  catch(err){ toast(err.message||'Не удалось изменить настройку','error',5000); }
+  await refreshPushUI();
+});
+
+async function enablePush(){
+  const reg=await navigator.serviceWorker.ready;
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted') throw new Error('Разрешение на уведомления не выдано');
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub) sub=await reg.pushManager.subscribe({
+    userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
+  const j=sub.toJSON();
+  const {error}=await sb.from('push_subscriptions').upsert({
+    user_id:state.me.id,endpoint:sub.endpoint,
+    p256dh:j.keys.p256dh,auth:j.keys.auth,
+    user_agent:navigator.userAgent.slice(0,300)},{onConflict:'endpoint'});
+  if(error) throw error;
+  toast('Уведомления включены','success');
+}
+
+async function disablePush(){
+  const sub=await currentSubscription();
+  if(sub){
+    await sb.from('push_subscriptions').delete().eq('endpoint',sub.endpoint);
+    await sub.unsubscribe();
+  }
+  toast('Уведомления выключены');
+}
+
+/* ============================================================
+   НАСТРОЙКИ УВЕДОМЛЕНИЙ
+   ============================================================ */
+function loadPrefsIntoUI(){
+  $('#pref-create').checked=!!state.me.notify_on_create;
+  $('#pref-assign').checked=!!state.me.notify_on_assign;
+  $('#pref-change').checked=!!state.me.notify_on_change;
+  $('#pref-reminder').value=String(state.me.reminder_minutes??60);
+}
+async function savePref(patch){
+  const {error}=await sb.from('users').update(patch).eq('id',state.me.id);
+  if(error){toast(error.message,'error');return;}
+  Object.assign(state.me,patch); toast('Сохранено','success',1500);
+}
+$('#pref-create').addEventListener('change',e=>savePref({notify_on_create:e.target.checked}));
+$('#pref-assign').addEventListener('change',e=>savePref({notify_on_assign:e.target.checked}));
+$('#pref-change').addEventListener('change',e=>savePref({notify_on_change:e.target.checked}));
+$('#pref-reminder').addEventListener('change',e=>savePref({reminder_minutes:Number(e.target.value)}));
+
+$('#btn-user-menu').addEventListener('click',async()=>{
+  loadPrefsIntoUI(); await loadBalance(); await refreshPushUI(); open('user-menu');
+});
+$('#btn-logout').addEventListener('click',async()=>{
+  await sb.rpc('log_action',{p_action_type:'auth.logout',p_entity_type:'auth',
+    p_entity_id:state.session?.user?.id||null,p_details:{}}).catch(()=>{});
+  await sb.auth.signOut(); location.reload();
+});
+
+/* ============================================================
+   АНАЛИТИКА
+   ============================================================ */
+$('#btn-stats').addEventListener('click',async()=>{
+  const now=new Date();
+  $('#stats-from').value=toDateInput(new Date(now.getFullYear(),now.getMonth(),1));
+  $('#stats-to').value=toDateInput(new Date(now.getFullYear(),now.getMonth()+1,0));
+  open('stats-modal'); await renderStats();
+});
+$('#stats-from').addEventListener('change',renderStats);
+$('#stats-to').addEventListener('change',renderStats);
+
+async function renderStats(){
+  const host=$('#stats-body');
+  host.innerHTML='<div class="text-sm py-6 text-center" style="color:var(--fg-muted);">Считаю…</div>';
+  const {data,error}=await sb.rpc('team_stats',{
+    p_from:$('#stats-from').value,p_to:$('#stats-to').value,p_team:state.currentTeam});
+  if(error){host.innerHTML=`<div class="text-sm" style="color:var(--error);">${escapeHtml(error.message)}</div>`;return;}
+
+  const t=data.totals||{}, c=data.checklists||{};
+  const pct=(a,b)=>b?Math.round(a/b*100):0;
+  const rows=(arr,fmt)=>arr?.length
+    ? arr.map(fmt).join('')
+    : `<div class="text-xs py-2" style="color:var(--fg-muted);">Нет данных</div>`;
+
+  host.innerHTML=`
+    <div class="text-xs" style="color:var(--fg-muted);">
+      Область: ${state.currentTeam?escapeHtml(teamName(state.currentTeam)):'все календари'}
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <div class="stat-tile"><div class="text-xs" style="color:var(--fg-muted);">Мероприятий</div>
+        <div class="text-2xl font-semibold">${t.events??0}</div></div>
+      <div class="stat-tile"><div class="text-xs" style="color:var(--fg-muted);">Часов</div>
+        <div class="text-2xl font-semibold">${t.hours??0}</div></div>
+    </div>
+    <div><h4 class="text-sm font-semibold mb-1">Выполнение чек-листов</h4>
+      <div class="stat-tile space-y-1">
+        <div class="flex justify-between text-sm"><span>Материалы</span>
+          <span style="color:var(--fg-muted);">${c.materials_done??0}/${c.materials_total??0} · ${pct(c.materials_done,c.materials_total)}%</span></div>
+        <div class="flex justify-between text-sm"><span>Действия</span>
+          <span style="color:var(--fg-muted);">${c.actions_done??0}/${c.actions_total??0} · ${pct(c.actions_done,c.actions_total)}%</span></div>
+      </div></div>
+    ${state.currentTeam?'':`<div><h4 class="text-sm font-semibold mb-1">По календарям</h4>
+      <div class="stat-tile">${rows(data.by_team,r=>
+        `<div class="flex justify-between py-1.5 text-sm" style="border-bottom:1px solid var(--border-light);">
+           <span class="truncate">${escapeHtml(r.name)}</span><span style="color:var(--fg-muted);">${r.events}</span></div>`)}</div></div>`}
+    <div><h4 class="text-sm font-semibold mb-1">Нагрузка по ответственным</h4>
+      <div class="stat-tile">${rows(data.by_responsible,r=>
+        `<div class="flex justify-between py-1.5 text-sm" style="border-bottom:1px solid var(--border-light);">
+           <span class="truncate">${escapeHtml(r.name)}</span>
+           <span style="color:var(--fg-muted);">${r.events} · ${r.hours} ч</span></div>`)}</div></div>
+    <div><h4 class="text-sm font-semibold mb-1">Кто больше всех закрывает пункты</h4>
+      <div class="stat-tile">${rows(data.top_closers,r=>
+        `<div class="flex justify-between py-1.5 text-sm" style="border-bottom:1px solid var(--border-light);">
+           <span class="truncate">${escapeHtml(r.name)}</span>
+           <span style="color:var(--fg-muted);">${r.done}</span></div>`)}</div></div>`;
+}
+
+/* ============================================================
+   REALTIME
+   ============================================================ */
+function setupRealtime(){
+  unsubscribeRealtime();
+  const ch=sb.channel('rt-main')
+    .on('postgres_changes',{event:'*',schema:'public',table:'events'},async()=>{
+      await loadEvents(); renderCalendar(); renderEventsList();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'event_materials'},async()=>{
+      if(state.openedEventId) await reloadChecklists(state.openedEventId);
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'event_actions'},async()=>{
+      if(state.openedEventId) await reloadChecklists(state.openedEventId);
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'event_attachments'},async()=>{
+      if(state.openedEventId) await reloadAttachments(state.openedEventId);
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'team_members'},async()=>{
+      await loadTeams(); await loadPeople(); renderTeamSelector();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'teams'},async()=>{
+      await loadTeams(); renderTeamSelector(); renderCalendar(); renderEventsList();
+    })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'users'},async payload=>{
+      if(payload.new?.id===state.me?.id){
+        state.me={...state.me,...payload.new};
+        if(state.me.status==='blocked') return route();
+        renderMe(); loadPrefsIntoUI();
+      }
+      await loadPeople();
+    })
+    .subscribe();
+  state.channels.push(ch);
+}
+function unsubscribeRealtime(){
+  for(const ch of state.channels) sb.removeChannel(ch);
+  state.channels=[];
+}
+
+/* ============================================================
+   SERVICE WORKER + СТАРТ
+   ============================================================ */
+if('serviceWorker'in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('SW register failed',err));
+  });
+}
+
+navigator.serviceWorker?.addEventListener('message',async e=>{
+  const id=e.data?.openEventId;
+  if(id){
+    if(!state.events.find(x=>x.id===id)) await loadEvents();
+    openEventView(id); return;
+  }
+  if(e.data?.pushSubscriptionChanged&&state.me&&vapidConfigured()){
+    try{ await enablePush(); await refreshPushUI(); }
+    catch(err){ console.warn('resubscribe failed',err); }
+  }
+});
+
+(async function init(){
+  checkDesktop();
+  await route();
+})();
 </script>
 </body>
 </html>
